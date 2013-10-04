@@ -1,0 +1,27 @@
+<xml>
+
+<include name="${HXCPP}/build-tool/BuildCommon.xml"/>
+
+<files id="files">
+	<compilerflag value="-Iinclude"/>
+	<file name="SteamWrap.cpp" />
+</files>
+
+<compiler id="default">
+	<objdir value="../temp/native" />
+</compiler>
+
+<target id="NDLL" output="steamwrap" tool="linker" toolid="dll">
+	<ext value=".ndll" />
+	<outdir name="../ndll/Mac" if="macos"/>
+	<outdir name="../ndll/Windows" if="windows"/>
+	<files id="files" />
+	<lib name="lib/libsteam_api.dylib" if="macos"/>
+	<lib name="lib/steam_api.lib" if="windows"/>
+</target>
+
+<target id="default">
+	<target id="NDLL" />
+</target>
+
+</xml>

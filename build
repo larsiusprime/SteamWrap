@@ -1,0 +1,15 @@
+#/bin/bash
+
+# build native ndll
+cd native
+haxelib run hxcpp Build.xml
+
+#exit 0
+
+# build test exe
+cd ..
+cd steamwrap
+haxe -cp .. Test.hx -main Test -cpp ../temp/hx/
+
+cd ..
+cp temp/hx/Test ndll/Mac

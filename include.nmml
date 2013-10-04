@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project>
+
+	<!--
+	<java path="project/android" if="android"/>
+
+	<ndll name="hypertouch" if="android" />
+	<ndll name="hypertouch" if="ios" />
+	-->
+
+	<ndll name="steamwrap" />
+	<classpath name="steamwrap" />
+</project>
