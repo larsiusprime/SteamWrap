@@ -13,9 +13,9 @@ Some basic instructions for building a native extension are here: [http://www.jo
 2. 	Copy the Steam SDK headers and libs:
 		
 		STEAMSDK/public/steam/*.h -> native/include/steam/*.h
-		STEAMSDK/public/redistributable_bin/steam_api.dll -> native/include/lib/
-		STEAMSDK/public/redistributable_bin/steam_api.lib -> native/include/lib/
-		STEAMSDK/public/redistributable_bin/osx32/libsteam_api.dylib -> native/include/lib/
+		STEAMSDK/public/redistributable_bin/steam_api.dll -> native/lib/
+		STEAMSDK/public/redistributable_bin/steam_api.lib -> native/lib/
+		STEAMSDK/public/redistributable_bin/osx32/libsteam_api.dylib -> native/lib/
 
 3. 	Edit steamwrap/Test.hx to include your Steam App Id
 
