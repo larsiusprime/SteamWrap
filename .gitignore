@@ -3,3 +3,8 @@
 /native/lib/*.dylib
 /native/lib/*.lib
 /native/lib/*.dll
+/native/obj
+/native/all_objs
+/native/*.pdb
+/temp
+/ndll
