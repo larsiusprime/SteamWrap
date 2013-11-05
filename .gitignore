@@ -1,0 +1,5 @@
+/native/include/hx/*.h
+/native/include/steam/*.h
+/native/lib/*.dylib
+/native/lib/*.lib
+/native/lib/*.dll
