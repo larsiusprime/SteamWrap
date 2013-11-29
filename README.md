@@ -7,7 +7,7 @@ Some basic instructions for building a native extension are here: [http://www.jo
 #### To build steamwrap.ndll:
 
 1.  Copy the hxcpp headers:
-		
+    	
 		HAXEDIR/lib/hxcpp/VERSION/include/hx/*.h -> native/include/hx/*.h
 
 2. 	Copy the Steam SDK headers and libs:
@@ -17,7 +17,7 @@ Some basic instructions for building a native extension are here: [http://www.jo
 		STEAMSDK/public/redistributable_bin/steam_api.lib -> native/lib/
 		STEAMSDK/public/redistributable_bin/osx32/libsteam_api.dylib -> native/lib/
 
-3. 	Edit steamwrap/Test.hx to include your Steam App Id
+3. 	Edit steamwrap/Test.hx to include your Steam App ID
 
 4. 	Run the "build" script (it's a basic haxelib command shortcut). 
 	steamwrap.ndll will be output to ndll/[PLATFORM]
@@ -32,36 +32,30 @@ Some basic instructions for building a native extension are here: [http://www.jo
 #### To include steamwrap.ndll in your OpenFL project:
 
 1. Build the ndll first as above. 
-(Assuming it goes into a subdirectory of your project named "SteamWrap")
 
-2. Add include rules to copy steam libs as assets. This is the Project.hx code; if you're using project.xml, create <assets> nodes with the same info and conditions.
+2. Add the following nodes to your NMML.
+ ```
+    <!-- Replace the question marks with your Steam App ID -->
+	<setenv name="STEAM_APP_ID" value="??????" />
 
-	```
-	if (target == Platform.MAC)
-	{
-		// @@ hack to get dylib copied over
-	    	assets.push(new Asset("SteamWrap/ndll/steam_appid.txt", "../MacOS/steam_appid.txt", AssetType.BINARY));
-	    	assets.push(new Asset("SteamWrap/ndll/Mac/libsteam_api.dylib", "../MacOS/libsteam_api.dylib", AssetType.BINARY));
-	}
-	else if (target == Platform.WINDOWS)
-	{
-	    	// @@ hack to get dll copied over
-	    	assets.push(new Asset("SteamWrap/ndll/steam_appid.txt", "steam_appid.txt", AssetType.BINARY));
-	    	assets.push(new Asset("SteamWrap/native/lib/steam_api.dll", "steam_api.dll", AssetType.BINARY));
-	}
-	```
+    <!-- Supply the relative path to where you put this extension -->
+	<extension name="steamwrap" path="../../lib/steamwrap" />
+ ```
+ 
+3. If you are doing non steam builds as well, it is practical to wrap this in a conditional. Run your builds as: `openfl test cpp -Dsteam` to enable it.
+ ```
+	<section if="steam">
+		<!-- Steam specifics go here -->
+	</section>
+ ```
 
 	**!!!!!!!!!!!!!!!!! IMPORTANT !!!!!!!!!!!!!!!!!!!**
 	
-	**Don't ship your game with steam_appid.txt. Make sure it's stripped during the publishing stage.**
+	**This extension will automatically create a steam_appid.txt in your binary folder.**
+    **Do not ship your game with this file. Make sure it's stripped during the publishing stage.**
 	
 	**!!!!!!!!!!!!!!!!! IMPORTANT !!!!!!!!!!!!!!!!!!!**
 
-3. Add the extension to your project.xml:
-
-	&lt;extension name="steamwrap" path="./SteamWrap" /&gt;
-	(or possibly &lt;extension path="./SteamWrap/include.nmml" /&gt;)
-	
 #### Usage:
 
 See steamwrap/Test.hx for a basic example.
