@@ -39,7 +39,7 @@ Some basic instructions for building a native extension are here: [http://www.jo
 	<setenv name="STEAM_APP_ID" value="??????" />
 
     <!-- Supply the relative path to where you put this extension -->
-	<extension name="steamwrap" path="../../lib/steamwrap" />
+	<include path="../../lib/steamwrap" />
  ```
  
 3. If you are doing non steam builds as well, it is practical to wrap this in a conditional. Run your builds as: `openfl test cpp -Dsteam` to enable it.
