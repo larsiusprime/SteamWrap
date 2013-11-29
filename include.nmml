@@ -4,14 +4,14 @@
 	<ndll name="steamwrap" />
 	<classpath name="steamwrap" />
 
-	<template path="templates/steam_appid.txt" rename="steam_appid.txt" />
-
 	<section if="windows">
 		<template path="ndll/Windows/steam_api.dll" rename="steam_api.dll" />
+		<template path="templates/steam_appid.txt" rename="steam_appid.txt" />
 	</section>
 
-	<section if="osx">
-		<template path="ndll/Mac/libsteam_api.dylib" rename="../MacOS/libsteam_api.dylib" />
+	<section if="mac">
+		<template path="native/lib/libsteam_api.dylib" rename="bin/${APP_FILE}.app/Contents/MacOS/libsteam_api.dylib" />
+		<template path="templates/steam_appid.txt" rename="bin/${APP_FILE}.app/Contents/MacOS/steam_appid.txt" />
 	</section>
 
 </project>
