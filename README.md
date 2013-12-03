@@ -33,13 +33,17 @@ Some basic instructions for building a native extension are here: [http://www.jo
 
 1. Build the ndll first as above. 
 
-2. Add the following nodes to your NMML.
+2. Add the following nodes to your project xml:
  ```
     <!-- Replace the question marks with your Steam App ID -->
 	<setenv name="STEAM_APP_ID" value="??????" />
 
     <!-- Supply the relative path to where you put this extension -->
 	<include path="../../lib/steamwrap" />
+
+	<!-- OS X only: Set this value to the same value as the file property of your <app> node, this is needed to embed things into the generated .app file -->
+	<!-- Setting this for other platforms won't do any harm, so you can safely leave it enabled for everything -->
+	<set name="APP_FILE" value="??????" />
  ```
  
 3. If you are doing non steam builds as well, it is practical to wrap this in a conditional. Run your builds as: `openfl test cpp -Dsteam` to enable it.
