@@ -8,7 +8,8 @@
 </files>
 
 <compiler id="default">
-	<objdir value="../temp/native" />
+	<objdir value="../obj/32" if="32"/>
+	<objdir value="../obj/64" if="HXCPP_M64"/>
 </compiler>
 
 <target id="NDLL" output="steamwrap" tool="linker" toolid="dll">

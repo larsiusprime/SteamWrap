@@ -4,5 +4,5 @@
 /native/obj
 /native/all_objs
 /native/*.pdb
-/temp
+/obj
 /ndll
