@@ -13,13 +13,20 @@
 
 <target id="NDLL" output="steamwrap" tool="linker" toolid="dll">
 	<ext value=".ndll" />
-	<outdir name="../ndll/Mac" if="macos"/>
-	<outdir name="../ndll/Windows" if="windows"/>
-	<outdir name="../ndll/Linux" if="linux"/>
 	<files id="files" />
-	<lib name="lib/libsteam_api.dylib" if="macos"/>
-	<lib name="lib/steam_api.lib" if="windows"/>
-	<lib name="lib/steam_api.so" if="linux"/>
+
+	<lib name="lib/osx32/libsteam_api.dylib" />
+	<outdir name="../ndll/Mac" />
+
+	<outdir name="../ndll/Windows" />
+	<lib name="lib/win32/steam_api.lib" />
+
+	<lib name="lib/linux64/libsteam_api.so" if="HXCPP_M64" />
+	<outdir name="../ndll/Linux64" if="HXCPP_M64" />
+
+	<lib name="lib/linux32/libsteam_api.so" if="32" />
+	<outdir name="../ndll/Linux" if="32" />
+
 </target>
 
 <target id="default">

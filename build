@@ -2,14 +2,21 @@
 
 # build native ndll
 cd native
-haxelib run hxcpp Build.xml
+
+# compile for 32 bit, the flag is only really needed to differentiate from a 64 bit build
+haxelib run hxcpp Build.xml -D32
+
+# if we're on linux, do a 64 bit build too
+if [[ ''$OSTYPE'' == ''linux-gnu'' ]]; then
+	haxelib run hxcpp Build.xml -DHXCPP_M64
+fi
 
 #exit 0
 
 # build test exe
-cd ..
-cd steamwrap
-haxe -cp .. Test.hx -main Test -cpp ../temp/hx/
+#cd ..
+#cd steamwrap
+#haxe -cp .. Test.hx -main Test -cpp ../temp/hx/
 
-cd ..
-cp temp/hx/Test ndll/Mac
+#cd ..
+#cp temp/hx/Test ndll/Mac
