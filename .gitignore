@@ -1,9 +1,6 @@
 /native/include/hx/*.h
 /native/include/steam/*.h
-/native/lib/*.dylib
-/native/lib/*.lib
-/native/lib/*.dll
-native/lib/*.so
+/native/lib/*
 /native/obj
 /native/all_objs
 /native/*.pdb
