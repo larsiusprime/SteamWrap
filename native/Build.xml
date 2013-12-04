@@ -15,9 +15,11 @@
 	<ext value=".ndll" />
 	<outdir name="../ndll/Mac" if="macos"/>
 	<outdir name="../ndll/Windows" if="windows"/>
+	<outdir name="../ndll/Linux" if="linux"/>
 	<files id="files" />
 	<lib name="lib/libsteam_api.dylib" if="macos"/>
 	<lib name="lib/steam_api.lib" if="windows"/>
+	<lib name="lib/steam_api.so" if="linux"/>
 </target>
 
 <target id="default">

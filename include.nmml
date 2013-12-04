@@ -9,6 +9,17 @@
 		<template path="templates/steam_appid.txt" rename="steam_appid.txt" />
 	</section>
 
+	<section if="linux">
+		<template path="native/lib/libsteam_api.so" rename="libsteam_api.so" />
+
+		<template path="native/lib/libsteam.so" rename="libsteam.so" />
+		<template path="native/lib/libtier0_s.so" rename="libtier0_s.so" />
+		<template path="native/lib/libvstdlib_s.so" rename="libvstdlib_s.so" />
+		<template path="native/lib/steamclient.so" rename="steamclient.so" />
+
+		<template path="templates/steam_appid.txt" rename="steam_appid.txt" />
+	</section>
+
 	<section if="mac">
 		<template path="native/lib/libsteam_api.dylib" rename="bin/${APP_FILE}.app/Contents/MacOS/libsteam_api.dylib" />
 		<template path="templates/steam_appid.txt" rename="bin/${APP_FILE}.app/Contents/MacOS/steam_appid.txt" />
