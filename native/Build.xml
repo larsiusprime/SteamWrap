@@ -12,15 +12,22 @@
 	<objdir value="../obj/64" if="HXCPP_M64"/>
 </compiler>
 
-<target id="NDLL" output="steamwrap" tool="linker" toolid="dll">
+<target id="NDLL" output="steamwrap" tool="linker" toolid="dll" unless="linux">
 	<ext value=".ndll" />
 	<files id="files" />
 
 	<lib name="lib/osx32/libsteam_api.dylib" if="macos" />
 	<outdir name="../ndll/Mac" if="macos" />
 
-	<outdir name="../ndll/Windows" if="windows" />
 	<lib name="lib/win32/steam_api.lib" if="windows"/>
+	<outdir name="../ndll/Windows" if="windows" />
+</target>
+
+<!-- this node is duplicated for linux because i couldn't get <section> tags to work OR use multiple if conditions -->
+
+<target id="NDLL" output="steamwrap" tool="linker" toolid="dll" if="linux">
+	<ext value=".ndll" />
+	<files id="files" />
 
 	<lib name="lib/linux64/libsteam_api.so" if="HXCPP_M64" />
 	<outdir name="../ndll/Linux64" if="HXCPP_M64" />
@@ -28,6 +35,7 @@
 	<lib name="lib/linux32/libsteam_api.so" if="32" />
 	<outdir name="../ndll/Linux" if="32" />
 
+	<flag value="-Wl,-rpath,'$ORIGIN/:/lib:/usr/lib'" />
 </target>
 
 <target id="default">
