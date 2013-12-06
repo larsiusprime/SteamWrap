@@ -1,5 +1,8 @@
 #/bin/bash
 
+# removes old builds, just to be safe
+rm -rf obj
+
 # build native ndll
 cd native
 
