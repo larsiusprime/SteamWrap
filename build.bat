@@ -1,13 +1,13 @@
 @echo off
 rem build native ndll
 cd native
-haxelib run hxcpp Build.xml
+haxelib run hxlibc Build.xml
 
 rem build test exe
-cd ..
-cd steamwrap
-haxe -cp .. Test.hx -main Test -cpp ..\temp\hx
+rem cd ..
+rem cd steamwrap
+rem haxe -cp .. Test.hx -main Test -cpp ..\temp\hx
 
-cd ..
-copy temp\hx\Test.exe ndll\Windows
-copy native\lib\*.dll ndll\Windows
+rem cd ..
+rem copy temp\hx\Test.exe ndll\Windows
+rem copy native\lib\*.dll ndll\Windows
