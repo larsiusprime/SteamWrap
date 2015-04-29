@@ -62,7 +62,7 @@ Some basic instructions for building a native extension are here: [http://www.jo
 
 5.	Put some files in the built dir (Mac):
 		
-		ndll/Mac/steam_appid.txt
-		STEAMSDK/public/redistributable_bin/steam_api.lib -> ndll/Mac/
+		ndll/Mac64/steam_appid.txt
+		STEAMSDK/public/redistributable_bin/steam_api.lib -> ndll/Mac64/
 
 6.	Start Steam and run ndll/Mac/Test to confirm that it connects.
