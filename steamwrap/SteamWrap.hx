@@ -98,8 +98,8 @@ class SteamWrap
 	{
 		if (whenTrace != null)
 			whenTrace(str);
-		//else
-		//	trace(str);
+		else
+			trace(str);
 	}
 
 	private static inline function report(func:String, params:Array<String>, result:Bool):Bool

@@ -10,6 +10,9 @@ echo Building for 32 bits
 # compile for 32 bit, the flag is only really needed to differentiate from a 64 bit build
 haxelib run hxlibc Build.xml -D32
 
+echo Building for 64 bits
+haxelib run hxlibc Build.xml -DHXCPP_M64
+
 # if we're on linux, do a 64 bit build too
 if [[ ''$OSTYPE'' == ''linux-gnu'' ]]; then
 	echo Building for 64 bits
