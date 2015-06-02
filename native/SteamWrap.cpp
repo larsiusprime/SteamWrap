@@ -345,6 +345,18 @@ value SteamWrap_ClearAchievement(value name)
 DEFINE_PRIM(SteamWrap_ClearAchievement, 1);
 
 //-----------------------------------------------------------------------------------------------------------
+value SteamWrap_IndicateAchievementProgress(value name, value numCurProgres, value numMaxProgress)
+{
+	if (!val_is_string(name) || !val_is_int(numCurProgres) || !val_is_int(numMaxProgress) || !CheckInit())
+		return alloc_bool(false);
+
+	bool result = SteamUserStats()->IndicateAchievementProgress(val_string(name), val_int(numCurProgres), val_int(numMaxProgress));
+
+	return alloc_bool(result);
+}
+DEFINE_PRIM(SteamWrap_IndicateAchievementProgress, 3);
+
+//-----------------------------------------------------------------------------------------------------------
 value SteamWrap_FindLeaderboard(value name)
 {
 	if (!val_is_string(name) || !CheckInit())

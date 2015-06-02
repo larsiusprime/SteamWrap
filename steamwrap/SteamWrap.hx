@@ -44,6 +44,7 @@ class SteamWrap
 			SteamWrap_SetStat = cpp.Lib.load("steamwrap", "SteamWrap_SetStat", 2);
 			SteamWrap_SetAchievement = cpp.Lib.load("steamwrap", "SteamWrap_SetAchievement", 1);
 			SteamWrap_ClearAchievement = cpp.Lib.load("steamwrap", "SteamWrap_ClearAchievement", 1);
+			SteamWrap_IndicateAchievementProgress = cpp.Lib.load("steamwrap", "SteamWrap_IndicateAchievementProgress", 3);
 			SteamWrap_StoreStats = cpp.Lib.load("steamwrap", "SteamWrap_StoreStats", 0);
 			SteamWrap_FindLeaderboard = cpp.Lib.load("steamwrap", "SteamWrap_FindLeaderboard", 1);
 			SteamWrap_UploadScore = cpp.Lib.load("steamwrap", "SteamWrap_UploadScore", 3);
@@ -117,6 +118,11 @@ class SteamWrap
 	public static function clearAchievement(id:String):Bool
 	{
 		return active && report("clearAchievement", [id], SteamWrap_ClearAchievement(id));
+	}
+
+	public static function indicateAchievementProgress(id:String, curProgress:Int, maxProgress:Int):Bool
+	{
+		return active && report("indicateAchivevementProgress", [id, Std.string(curProgress), Std.string(maxProgress)], SteamWrap_IndicateAchievementProgress(id, curProgress, maxProgress));
 	}
 
 	// Kinda awkwardly returns 0 on errors and uses 0 for checking success
@@ -256,6 +262,7 @@ class SteamWrap
 	private static var SteamWrap_SetStat:Dynamic;
 	private static var SteamWrap_SetAchievement:Dynamic;
 	private static var SteamWrap_ClearAchievement:Dynamic;
+	private static var SteamWrap_IndicateAchievementProgress:Dynamic;
 	private static var SteamWrap_StoreStats:Dynamic;
 	private static var SteamWrap_FindLeaderboard:Dynamic;
 	private static var SteamWrap_UploadScore:String->Int->Int->Bool;
