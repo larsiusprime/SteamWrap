@@ -2,6 +2,11 @@
 
 <include name="${HXCPP}/build-tool/BuildCommon.xml"/>
 
+<section if="macos">
+	<set name="HXCPP_CLANG" value="1" />
+	<include name="${HXCPP}/toolchain/mac-toolchain.xml"/>
+</section>
+
 <files id="files">
 	<compilerflag value="-Iinclude"/>
 	<file name="SteamWrap.cpp" />
