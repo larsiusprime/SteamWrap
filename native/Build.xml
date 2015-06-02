@@ -2,6 +2,10 @@
 
 <include name="${HXCPP}/build-tool/BuildCommon.xml"/>
 
+<section if="windows">
+	<include name="${HXCPP}/toolchain/msvc-toolchain.xml"/>
+</section>
+
 <section if="macos">
 	<set name="HXCPP_CLANG" value="1" />
 	<include name="${HXCPP}/toolchain/mac-toolchain.xml"/>

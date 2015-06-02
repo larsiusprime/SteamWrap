@@ -1,7 +1,7 @@
 @echo off
 rem build native ndll
 cd native
-haxelib run hxlibc Build.xml
+haxelib run hxcpp Build.xml
 
 rem build test exe
 rem cd ..
