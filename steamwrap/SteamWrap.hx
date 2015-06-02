@@ -119,6 +119,16 @@ class SteamWrap
 		return active && report("clearAchievement", [id], SteamWrap_ClearAchievement(id));
 	}
 
+	// Kinda awkwardly returns 0 on errors and uses 0 for checking success
+	public static function getStat(id:String):Int
+	{
+		if (!active)
+			return 0;
+		var val = SteamWrap_GetStat(id);
+		report("getStat", [id], val != 0);
+		return val;
+	}
+
 	public static function setStat(id:String, val:Int):Bool
 	{
 		return active && report("setStat", [id, Std.string(val)], SteamWrap_SetStat(id, val));
