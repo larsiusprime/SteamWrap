@@ -11,6 +11,10 @@
 	<include name="${HXCPP}/toolchain/mac-toolchain.xml"/>
 </section>
 
+<section if="linux">
+	<include name="${HXCPP}/toolchain/linux-toolchain.xml"/>
+</section>
+
 <files id="files">
 	<compilerflag value="-Iinclude"/>
 	<file name="SteamWrap.cpp" />
