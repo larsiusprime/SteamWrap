@@ -17,7 +17,7 @@
 </files>
 
 <compiler id="default">
-	<objdir value="../obj/32" if="32"/>
+	<objdir value="../obj/32" if="HXCPP_M32"/>
 	<objdir value="../obj/64" if="HXCPP_M64"/>
 </compiler>
 
@@ -28,8 +28,8 @@
 	<lib name="lib/osx64/libsteam_api.dylib" if="macos HXCPP_M64" />
 	<outdir name="../ndll/Mac64" if="macos HXCPP_M64" />
 
-	<lib name="lib/osx32/libsteam_api.dylib" if="macos 32" />
-	<outdir name="../ndll/Mac" if="macos 32" />
+	<lib name="lib/osx32/libsteam_api.dylib" if="macos HXCPP_M32" />
+	<outdir name="../ndll/Mac" if="macos HXCPP_M32" />
 
 	<lib name="lib/win32/steam_api.lib" if="windows"/>
 	<outdir name="../ndll/Windows" if="windows" />
@@ -44,8 +44,8 @@
 	<lib name="lib/linux64/libsteam_api.so" if="HXCPP_M64" />
 	<outdir name="../ndll/Linux64" if="HXCPP_M64" />
 
-	<lib name="lib/linux32/libsteam_api.so" if="32" />
-	<outdir name="../ndll/Linux" if="32" />
+	<lib name="lib/linux32/libsteam_api.so" if="HXCPP_M32" />
+	<outdir name="../ndll/Linux" if="HXCPP_M32" />
 
 	<flag value="-Wl,-rpath,'$ORIGIN/:/lib:/usr/lib'" />
 </target>

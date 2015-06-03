@@ -8,7 +8,7 @@ cd native
 
 echo Building for 32 bits
 # compile for 32 bit, the flag is only really needed to differentiate from a 64 bit build
-haxelib run hxcpp Build.xml -D32
+haxelib run hxcpp Build.xml -DHXCPP_M32
 
 # if we're on linux or mac, do a 64 bit build too
 os_type=$(uname -s)
