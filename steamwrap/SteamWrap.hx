@@ -24,12 +24,12 @@ class SteamWrap
 
 	static var leaderboardIds:Array<String>;
 	static var leaderboardOps:List<LeaderboardOp>;
-	
+
 	public static function init(appId_:Int)
 	{
 		#if cpp
 		if (active) return;
-		
+
 		appId = appId_;
 		leaderboardIds = new Array<String>();
 		leaderboardOps = new List<LeaderboardOp>();
@@ -53,6 +53,7 @@ class SteamWrap
 			SteamWrap_GetGlobalStat = cpp.Lib.load("steamwrap", "SteamWrap_GetGlobalStat", 1);
 			SteamWrap_RestartAppIfNecessary = cpp.Lib.load("steamwrap", "SteamWrap_RestartAppIfNecessary", 1);
 			SteamWrap_IsSteamRunning = cpp.Lib.load("steamwrap", "SteamWrap_IsSteamRunning", 0);
+			SteamWrap_CreateUGCItem = cpp.Lib.load("steamwrap", "SteamWrap_CreateUGCItem", 1);
 		}
 		catch (e:Dynamic)
 		{
@@ -83,6 +84,10 @@ class SteamWrap
 	{
 		if (!active) return;
 		SteamWrap_Shutdown();
+	}
+
+	public static function createUGCItem(){
+		SteamWrap_CreateUGCItem(appId);
 	}
 
 	public static function isSteamRunning()
@@ -216,7 +221,7 @@ class SteamWrap
 		{
 			case "UserStatsReceived":
 				haveReceivedUserStats = success;
-			
+
 			case "UserStatsStored":
 				// retry next frame if failed
 				wantStoreStats = !success;
@@ -251,6 +256,10 @@ class SteamWrap
 					if (score != null && whenLeaderboardScoreUploaded != null) whenLeaderboardScoreUploaded(score);
 				}
 				processNextLeaderboardOp();
+			case "UGCLegalAgreementStatus":
+
+			case "UGCItemCreated":
+
 		}
 	}
 
@@ -271,6 +280,7 @@ class SteamWrap
 	private static var SteamWrap_GetGlobalStat:Dynamic;
 	private static var SteamWrap_RestartAppIfNecessary:Dynamic;
 	private static var SteamWrap_IsSteamRunning:Dynamic;
+	private static var SteamWrap_CreateUGCItem:Dynamic;
 }
 
 class LeaderboardScore
@@ -279,7 +289,7 @@ class LeaderboardScore
 	public var score:Int;
 	public var detail:Int;
 	public var rank:Int;
-	
+
 	public function new(leaderboardId_:String, score_:Int, detail_:Int, rank_:Int=-1)
 	{
 		leaderboardId = leaderboardId_;

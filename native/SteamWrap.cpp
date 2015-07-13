@@ -24,6 +24,8 @@ static const char* kEventTypeOnLeaderboardFound = "LeaderboardFound";
 static const char* kEventTypeOnScoreUploaded = "ScoreUploaded";
 static const char* kEventTypeOnScoreDownloaded = "ScoreDownloaded";
 static const char* kEventTypeOnGlobalStatsReceived = "GlobalStatsReceived";
+static const char* kEventTypeUGCLegalAgreement = "UGCLegalAgreementStatus";
+static const char* kEventTypeUGCItemCreated = "UGCItemCreated";
 
 struct Event
 {
@@ -52,6 +54,7 @@ class CallbackHandler
 private:
 	//SteamLeaderboard_t m_curLeaderboard;
 	std::map<std::string, SteamLeaderboard_t> m_leaderboards;
+	PublishedFileId_t m_ugcFileID;
 
 public:
 
@@ -68,11 +71,11 @@ public:
 	void FindLeaderboard(const char* name);
 	void OnLeaderboardFound( LeaderboardFindResult_t *pResult, bool bIOFailure);
 	CCallResult<CallbackHandler, LeaderboardFindResult_t> m_callResultFindLeaderboard;
-	
+
 	bool UploadScore(const std::string& leaderboardId, int score, int detail);
 	void OnScoreUploaded( LeaderboardScoreUploaded_t *pResult, bool bIOFailure);
 	CCallResult<CallbackHandler, LeaderboardScoreUploaded_t> m_callResultUploadScore;
-	
+
 	bool DownloadScores(const std::string& leaderboardId, int numBefore, int numAfter);
 	void OnScoreDownloaded( LeaderboardScoresDownloaded_t *pResult, bool bIOFailure);
 	CCallResult<CallbackHandler, LeaderboardScoresDownloaded_t> m_callResultDownloadScore;
@@ -80,6 +83,10 @@ public:
 	void RequestGlobalStats();
 	void OnGlobalStatsReceived(GlobalStatsReceived_t* pResult, bool bIOFailure);
 	CCallResult<CallbackHandler, GlobalStatsReceived_t> m_callResultRequestGlobalStats;
+
+	void CreateUGCItem(AppId_t nConsumerAppId, EWorkshopFileType eFileType);
+	void OnUGCItemCreated( CreateItemResult_t *pResult, bool bIOFailure);
+	CCallResult<CallbackHandler, CreateItemResult_t> m_callResultCreateUGCItem;
 };
 
 void CallbackHandler::OnUserStatsReceived( UserStatsReceived_t *pCallback )
@@ -98,6 +105,44 @@ void CallbackHandler::OnAchievementStored( UserAchievementStored_t *pCallback )
 {
  	if (pCallback->m_nGameID != SteamUtils()->GetAppID()) return;
 	SendEvent(Event(kEventTypeOnUserAchievementStored, true, pCallback->m_rgchAchievementName));
+}
+
+void CallbackHandler::CreateUGCItem(AppId_t nConsumerAppId, EWorkshopFileType eFileType)
+{
+	m_ugcFileID = 0;
+	SteamAPICall_t hSteamAPICall = SteamUGC()->CreateItem(nConsumerAppId, eFileType);
+	m_callResultCreateUGCItem.Set(hSteamAPICall, this, &CallbackHandler::OnUGCItemCreated);
+}
+
+void CallbackHandler::OnUGCItemCreated(CreateItemResult_t *pCallback, bool bIOFailure)
+{
+	/*
+	*  k_EResultInsufficientPrivilege - The user creating the item is currently banned in the community.
+	*  k_EResultTimeout - The operation took longer than expected, have the user retry the create process.
+	*  k_EResultNotLoggedOn - The user is not currently logged into Steam.
+	*/
+
+	if(	pCallback->m_eResult == k_EResultInsufficientPrivilege ||
+		pCallback->m_eResult == k_EResultTimeout ||
+		pCallback->m_eResult == k_EResultNotLoggedOn)
+	{
+		SendEvent(Event(kEventTypeUGCItemCreated, false));
+	}
+	else{
+		std::ostringstream fileIDStream;
+		fileIDStream << m_ugcFileID;
+		SendEvent(Event(kEventTypeUGCItemCreated, true, fileIDStream.str().c_str()));
+	}
+
+	m_ugcFileID = pCallback->m_nPublishedFileId;
+
+	SendEvent(Event(kEventTypeUGCLegalAgreement, !pCallback->m_bUserNeedsToAcceptWorkshopLegalAgreement));
+
+	if(pCallback->m_bUserNeedsToAcceptWorkshopLegalAgreement){
+		std::ostringstream urlStream;
+		urlStream << "steam://url/CommunityFilePage/" << m_ugcFileID;
+		SteamFriends()->ActivateGameOverlayToWebPage(urlStream.str().c_str());
+	}
 }
 
 void CallbackHandler::FindLeaderboard(const char* name)
@@ -178,7 +223,7 @@ void CallbackHandler::OnScoreDownloaded(LeaderboardScoresDownloaded_t *pCallback
 	}
 
 	std::string leaderboardId = SteamUserStats()->GetLeaderboardName(pCallback->m_hSteamLeaderboard);
-	
+
 	int numEntries = pCallback->m_cEntryCount;
 	if (numEntries > 10) numEntries = 10;
 
@@ -310,13 +355,26 @@ DEFINE_PRIM(SteamWrap_SetStat, 2);
 //-----------------------------------------------------------------------------------------------------------
 value SteamWrap_StoreStats()
 {
-	if (!CheckInit()) 
+	if (!CheckInit())
 		return alloc_bool(false);
 
 	bool result = SteamUserStats()->StoreStats();
 	return alloc_bool(result);
 }
 DEFINE_PRIM(SteamWrap_StoreStats, 0);
+
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_CreateUGCItem(value id)
+{
+	if (!val_is_int(id) || !CheckInit())
+		return alloc_bool(false);
+
+	s_callbackHandler->CreateUGCItem(val_int(id), k_EWorkshopFileTypeCommunity);
+
+ 	return alloc_bool(true);
+}
+DEFINE_PRIM(SteamWrap_CreateUGCItem, 1);
+
 
 //-----------------------------------------------------------------------------------------------------------
 value SteamWrap_SetAchievement(value name)
