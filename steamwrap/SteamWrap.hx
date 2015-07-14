@@ -25,6 +25,10 @@ class SteamWrap
 	static var leaderboardIds:Array<String>;
 	static var leaderboardOps:List<LeaderboardOp>;
 
+	public static var itemIDs:Array<Int>;
+
+	static var currentItemUpdateHandle:String;
+
 	public static function init(appId_:Int)
 	{
 		#if cpp
@@ -33,6 +37,7 @@ class SteamWrap
 		appId = appId_;
 		leaderboardIds = new Array<String>();
 		leaderboardOps = new List<LeaderboardOp>();
+		itemIDs = new Array<Int>();
 
 		try
 		{
@@ -54,6 +59,9 @@ class SteamWrap
 			SteamWrap_RestartAppIfNecessary = cpp.Lib.load("steamwrap", "SteamWrap_RestartAppIfNecessary", 1);
 			SteamWrap_IsSteamRunning = cpp.Lib.load("steamwrap", "SteamWrap_IsSteamRunning", 0);
 			SteamWrap_CreateUGCItem = cpp.Lib.load("steamwrap", "SteamWrap_CreateUGCItem", 1);
+			SteamWrap_StartUpdateUGCItem = cpp.Lib.load("steamwrap", "SteamWrap_StartUpdateUGCItem", 2);
+			SteamWrap_SetUGCItemTitle = cpp.Lib.load("steamwrap", "SteamWrap_SetUGCItemTitle", 2);
+			SteamWrap_SubmitUGCItemUpdate = cpp.Lib.load("steamwrap", "SteamWrap_SubmitUGCItemUpdate", 2);
 		}
 		catch (e:Dynamic)
 		{
@@ -84,6 +92,19 @@ class SteamWrap
 	{
 		if (!active) return;
 		SteamWrap_Shutdown();
+	}
+
+	public static function startUpdateUGCItem(itemID:Int){
+		currentItemUpdateHandle = SteamWrap_StartUpdateUGCItem(appId, itemID);
+		trace(currentItemUpdateHandle);
+	}
+
+	public static function submitUGCItemUpdate(changeNotes:String){
+		SteamWrap_SubmitUGCItemUpdate(currentItemUpdateHandle, changeNotes);
+	}
+
+	public static function setUGCItemTitle(itemTitle:String):Bool {
+		return SteamWrap_SetUGCItemTitle(currentItemUpdateHandle, itemTitle.substr(0, 128));
 	}
 
 	public static function createUGCItem(){
@@ -259,7 +280,19 @@ class SteamWrap
 			case "UGCLegalAgreementStatus":
 
 			case "UGCItemCreated":
-
+				if(success && itemIDs != null){
+					itemIDs.push(Std.parseInt(data));
+				}
+			case "UGCItemUpdateStarted":
+				trace("UGCItemUpdateStarted success: " + success);
+				trace("UGCItemUpdateStarted data: " + data);
+				if(success){
+					currentItemUpdateHandle = data;
+				}
+			case "UGCItemUpdateSubmitted":
+				if(success){
+					trace("Update submitted succesfully!");
+				}
 		}
 	}
 
@@ -281,6 +314,9 @@ class SteamWrap
 	private static var SteamWrap_RestartAppIfNecessary:Dynamic;
 	private static var SteamWrap_IsSteamRunning:Dynamic;
 	private static var SteamWrap_CreateUGCItem:Dynamic;
+	private static var SteamWrap_StartUpdateUGCItem:Dynamic;
+	private static var SteamWrap_SetUGCItemTitle:Dynamic;
+	private static var SteamWrap_SubmitUGCItemUpdate:Dynamic;
 }
 
 class LeaderboardScore

@@ -7,6 +7,7 @@
 #include <string.h>
 #include <vector>
 #include <sstream>
+#include <iostream>
 #include <map>
 
 #include <steam/steam_api.h>
@@ -26,6 +27,8 @@ static const char* kEventTypeOnScoreDownloaded = "ScoreDownloaded";
 static const char* kEventTypeOnGlobalStatsReceived = "GlobalStatsReceived";
 static const char* kEventTypeUGCLegalAgreement = "UGCLegalAgreementStatus";
 static const char* kEventTypeUGCItemCreated = "UGCItemCreated";
+static const char* kEventTypeOnItemUpdateSubmitted = "UGCItemUpdateSubmitted";
+
 
 struct Event
 {
@@ -54,8 +57,6 @@ class CallbackHandler
 private:
 	//SteamLeaderboard_t m_curLeaderboard;
 	std::map<std::string, SteamLeaderboard_t> m_leaderboards;
-	PublishedFileId_t m_ugcFileID;
-
 public:
 
 	CallbackHandler() :
@@ -87,6 +88,10 @@ public:
 	void CreateUGCItem(AppId_t nConsumerAppId, EWorkshopFileType eFileType);
 	void OnUGCItemCreated( CreateItemResult_t *pResult, bool bIOFailure);
 	CCallResult<CallbackHandler, CreateItemResult_t> m_callResultCreateUGCItem;
+
+	void SubmitUGCItemUpdate(UGCUpdateHandle_t handle, const char *pchChangeNote);
+	void OnItemUpdateSubmitted( SubmitItemUpdateResult_t *pResult, bool bIOFailure);
+	CCallResult<CallbackHandler, SubmitItemUpdateResult_t> m_callResultSubmitUGCItemUpdate;
 };
 
 void CallbackHandler::OnUserStatsReceived( UserStatsReceived_t *pCallback )
@@ -107,21 +112,47 @@ void CallbackHandler::OnAchievementStored( UserAchievementStored_t *pCallback )
 	SendEvent(Event(kEventTypeOnUserAchievementStored, true, pCallback->m_rgchAchievementName));
 }
 
+void CallbackHandler::SubmitUGCItemUpdate(UGCUpdateHandle_t handle, const char *pchChangeNote)
+{
+	SteamAPICall_t hSteamAPICall = SteamUGC()->SubmitItemUpdate(handle, pchChangeNote);
+	m_callResultSubmitUGCItemUpdate.Set(hSteamAPICall, this, &CallbackHandler::OnItemUpdateSubmitted);
+}
+
+void CallbackHandler::OnItemUpdateSubmitted(SubmitItemUpdateResult_t *pCallback, bool bIOFailure)
+{
+	if(	pCallback->m_eResult == k_EResultInsufficientPrivilege ||
+		pCallback->m_eResult == k_EResultTimeout ||
+		pCallback->m_eResult == k_EResultNotLoggedOn ||
+		bIOFailure)
+	{
+		SendEvent(Event(kEventTypeOnItemUpdateSubmitted, false));
+	}
+	else{
+		SendEvent(Event(kEventTypeOnItemUpdateSubmitted, true));
+	}
+}
+
 void CallbackHandler::CreateUGCItem(AppId_t nConsumerAppId, EWorkshopFileType eFileType)
 {
-	m_ugcFileID = 0;
 	SteamAPICall_t hSteamAPICall = SteamUGC()->CreateItem(nConsumerAppId, eFileType);
 	m_callResultCreateUGCItem.Set(hSteamAPICall, this, &CallbackHandler::OnUGCItemCreated);
 }
 
 void CallbackHandler::OnUGCItemCreated(CreateItemResult_t *pCallback, bool bIOFailure)
 {
-	/*
-	*  k_EResultInsufficientPrivilege - The user creating the item is currently banned in the community.
-	*  k_EResultTimeout - The operation took longer than expected, have the user retry the create process.
-	*  k_EResultNotLoggedOn - The user is not currently logged into Steam.
-	*/
+	if (bIOFailure)
+	{
+		SendEvent(Event(kEventTypeUGCItemCreated, false));
+		return;
+	}
 
+	PublishedFileId_t m_ugcFileID = pCallback->m_nPublishedFileId;
+
+	/*
+	*  k_EResultInsufficientPrivilege : The user creating the item is currently banned in the community.
+	*  k_EResultTimeout : The operation took longer than expected, have the user retry the create process.
+	*  k_EResultNotLoggedOn : The user is not currently logged into Steam.
+	*/
 	if(	pCallback->m_eResult == k_EResultInsufficientPrivilege ||
 		pCallback->m_eResult == k_EResultTimeout ||
 		pCallback->m_eResult == k_EResultNotLoggedOn)
@@ -134,13 +165,13 @@ void CallbackHandler::OnUGCItemCreated(CreateItemResult_t *pCallback, bool bIOFa
 		SendEvent(Event(kEventTypeUGCItemCreated, true, fileIDStream.str().c_str()));
 	}
 
-	m_ugcFileID = pCallback->m_nPublishedFileId;
-
 	SendEvent(Event(kEventTypeUGCLegalAgreement, !pCallback->m_bUserNeedsToAcceptWorkshopLegalAgreement));
 
 	if(pCallback->m_bUserNeedsToAcceptWorkshopLegalAgreement){
 		std::ostringstream urlStream;
 		urlStream << "steam://url/CommunityFilePage/" << m_ugcFileID;
+
+		// TODO: Separate this to it's own call through wrapper.
 		SteamFriends()->ActivateGameOverlayToWebPage(urlStream.str().c_str());
 	}
 }
@@ -362,6 +393,66 @@ value SteamWrap_StoreStats()
 	return alloc_bool(result);
 }
 DEFINE_PRIM(SteamWrap_StoreStats, 0);
+
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_SubmitUGCItemUpdate(value updateHandle, value changeNotes)
+{
+	if (!val_is_string(updateHandle)  || !val_is_string(changeNotes) || !CheckInit())
+	{
+		return alloc_bool(false);
+	}
+
+	// Create uint64 from the string.
+	uint64 updateHandle64;
+	std::istringstream handleStream(val_string(updateHandle));
+	if (!(handleStream >> updateHandle64))
+	{
+		return alloc_bool(false);
+	}
+
+	s_callbackHandler->SubmitUGCItemUpdate(updateHandle64, val_string(changeNotes));
+ 	return alloc_bool(true);
+}
+DEFINE_PRIM(SteamWrap_SubmitUGCItemUpdate, 2);
+
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_StartUpdateUGCItem(value id, value itemID)
+{
+	if (!val_is_int(id)  || !val_is_int(itemID) || !CheckInit())
+	{
+		return alloc_string("0");
+	}
+
+	UGCUpdateHandle_t ugcUpdateHandle = SteamUGC()->StartItemUpdate(val_int(id), val_int(itemID));
+
+	//Change the uint64 to string, easier to handle between haxe & cpp.
+	std::ostringstream updateHandleStream;
+	updateHandleStream << ugcUpdateHandle;
+
+ 	return alloc_string(updateHandleStream.str().c_str());
+}
+DEFINE_PRIM(SteamWrap_StartUpdateUGCItem, 2);
+
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_SetUGCItemTitle(value updateHandle, value title)
+{
+	if (!val_is_string(updateHandle) || !val_is_string(title) || !CheckInit())
+	{
+		return alloc_bool(false);
+	}
+
+	// Create uint64 from the string.
+	uint64 updateHandle64;
+	std::istringstream handleStream(val_string(updateHandle));
+	if (!(handleStream >> updateHandle64))
+	{
+		return alloc_bool(false);
+	}
+
+	bool result = SteamUGC()->SetItemTitle(updateHandle64, val_string(title));
+	return alloc_bool(true);
+}
+DEFINE_PRIM(SteamWrap_SetUGCItemTitle, 2);
 
 //-----------------------------------------------------------------------------------------------------------
 value SteamWrap_CreateUGCItem(value id)
