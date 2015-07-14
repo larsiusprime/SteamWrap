@@ -120,6 +120,7 @@ void CallbackHandler::SubmitUGCItemUpdate(UGCUpdateHandle_t handle, const char *
 
 void CallbackHandler::OnItemUpdateSubmitted(SubmitItemUpdateResult_t *pCallback, bool bIOFailure)
 {
+	std::cout << std::endl << "eResult: " << pCallback->m_eResult << std::endl;
 	if(	pCallback->m_eResult == k_EResultInsufficientPrivilege ||
 		pCallback->m_eResult == k_EResultTimeout ||
 		pCallback->m_eResult == k_EResultNotLoggedOn ||
@@ -450,9 +451,95 @@ value SteamWrap_SetUGCItemTitle(value updateHandle, value title)
 	}
 
 	bool result = SteamUGC()->SetItemTitle(updateHandle64, val_string(title));
-	return alloc_bool(true);
+	return alloc_bool(result);
 }
 DEFINE_PRIM(SteamWrap_SetUGCItemTitle, 2);
+
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_SetUGCItemDescription(value updateHandle, value description)
+{
+	if (!val_is_string(updateHandle) || !val_is_string(description) || !CheckInit())
+	{
+		return alloc_bool(false);
+	}
+
+	// Create uint64 from the string.
+	uint64 updateHandle64;
+	std::istringstream handleStream(val_string(updateHandle));
+	if (!(handleStream >> updateHandle64))
+	{
+		return alloc_bool(false);
+	}
+
+	bool result = SteamUGC()->SetItemDescription(updateHandle64, val_string(description));
+	return alloc_bool(result);
+}
+DEFINE_PRIM(SteamWrap_SetUGCItemDescription, 2);
+
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_SetUGCItemVisibility(value updateHandle, value visibility)
+{
+	if (!val_is_string(updateHandle) || !val_is_int(visibility) || !CheckInit())
+	{
+		return alloc_bool(false);
+	}
+
+	// Create uint64 from the string.
+	uint64 updateHandle64;
+	std::istringstream handleStream(val_string(updateHandle));
+	if (!(handleStream >> updateHandle64))
+	{
+		return alloc_bool(false);
+	}
+
+	ERemoteStoragePublishedFileVisibility visibilityEnum = static_cast<ERemoteStoragePublishedFileVisibility>(val_int(visibility));
+
+	bool result = SteamUGC()->SetItemVisibility(updateHandle64, visibilityEnum);
+	return alloc_bool(result);
+}
+DEFINE_PRIM(SteamWrap_SetUGCItemVisibility, 2);
+
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_SetUGCItemContent(value updateHandle, value path)
+{
+	if (!val_is_string(updateHandle) || !val_is_string(path) || !CheckInit())
+	{
+		return alloc_bool(false);
+	}
+
+	// Create uint64 from the string.
+	uint64 updateHandle64;
+	std::istringstream handleStream(val_string(updateHandle));
+	if (!(handleStream >> updateHandle64))
+	{
+		return alloc_bool(false);
+	}
+
+	bool result = SteamUGC()->SetItemContent(updateHandle64, val_string(path));
+	return alloc_bool(result);
+}
+DEFINE_PRIM(SteamWrap_SetUGCItemContent, 2);
+
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_SetUGCItemPreviewImage(value updateHandle, value path)
+{
+	if (!val_is_string(updateHandle) || !val_is_string(path) || !CheckInit())
+	{
+		return alloc_bool(false);
+	}
+
+	// Create uint64 from the string.
+	uint64 updateHandle64;
+	std::istringstream handleStream(val_string(updateHandle));
+	if (!(handleStream >> updateHandle64))
+	{
+		return alloc_bool(false);
+	}
+
+	bool result = SteamUGC()->SetItemPreview(updateHandle64, val_string(path));
+	return alloc_bool(result);
+}
+DEFINE_PRIM(SteamWrap_SetUGCItemPreviewImage, 2);
 
 //-----------------------------------------------------------------------------------------------------------
 value SteamWrap_CreateUGCItem(value id)

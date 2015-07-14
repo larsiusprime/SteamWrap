@@ -61,6 +61,10 @@ class SteamWrap
 			SteamWrap_CreateUGCItem = cpp.Lib.load("steamwrap", "SteamWrap_CreateUGCItem", 1);
 			SteamWrap_StartUpdateUGCItem = cpp.Lib.load("steamwrap", "SteamWrap_StartUpdateUGCItem", 2);
 			SteamWrap_SetUGCItemTitle = cpp.Lib.load("steamwrap", "SteamWrap_SetUGCItemTitle", 2);
+			SteamWrap_SetUGCItemDescription = cpp.Lib.load("steamwrap", "SteamWrap_SetUGCItemDescription", 2);
+			SteamWrap_SetUGCItemVisibility = cpp.Lib.load("steamwrap", "SteamWrap_SetUGCItemVisibility", 2);
+			SteamWrap_SetUGCItemContent = cpp.Lib.load("steamwrap", "SteamWrap_SetUGCItemContent", 2);
+			SteamWrap_SetUGCItemPreviewImage = cpp.Lib.load("steamwrap", "SteamWrap_SetUGCItemPreviewImage", 2);
 			SteamWrap_SubmitUGCItemUpdate = cpp.Lib.load("steamwrap", "SteamWrap_SubmitUGCItemUpdate", 2);
 		}
 		catch (e:Dynamic)
@@ -105,6 +109,28 @@ class SteamWrap
 
 	public static function setUGCItemTitle(itemTitle:String):Bool {
 		return SteamWrap_SetUGCItemTitle(currentItemUpdateHandle, itemTitle.substr(0, 128));
+	}
+
+	public static function setUGCItemDescription(itemDesc:String):Bool {
+		return SteamWrap_SetUGCItemDescription(currentItemUpdateHandle, itemDesc.substr(0, 8000));
+	}
+
+	public static function setUGCItemVisibility(visibility:Int):Bool {
+		/*
+		* 	https://partner.steamgames.com/documentation/ugc
+		*	0 : Public
+		*	1 : Friends Only
+		*	2 : Private
+		*/
+		return SteamWrap_SetUGCItemVisibility(currentItemUpdateHandle, visibility);
+	}
+
+	public static function setUGCItemContent(absPath:String):Bool {
+		return SteamWrap_SetUGCItemContent(currentItemUpdateHandle, absPath);
+	}
+
+	public static function setUGCItemPreviewImage(absPath:String):Bool {
+		return SteamWrap_SetUGCItemPreviewImage(currentItemUpdateHandle, absPath);
 	}
 
 	public static function createUGCItem(){
@@ -316,7 +342,14 @@ class SteamWrap
 	private static var SteamWrap_CreateUGCItem:Dynamic;
 	private static var SteamWrap_StartUpdateUGCItem:Dynamic;
 	private static var SteamWrap_SetUGCItemTitle:Dynamic;
+	private static var SteamWrap_SetUGCItemDescription:Dynamic;
+	private static var SteamWrap_SetUGCItemVisibility:Dynamic;
+	private static var SteamWrap_SetUGCItemContent:Dynamic;
+	private static var SteamWrap_SetUGCItemPreviewImage:Dynamic;
 	private static var SteamWrap_SubmitUGCItemUpdate:Dynamic;
+
+
+
 }
 
 class LeaderboardScore
