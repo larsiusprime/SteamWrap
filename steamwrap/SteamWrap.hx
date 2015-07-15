@@ -303,22 +303,16 @@ class SteamWrap
 					if (score != null && whenLeaderboardScoreUploaded != null) whenLeaderboardScoreUploaded(score);
 				}
 				processNextLeaderboardOp();
-			case "UGCLegalAgreementStatus":
-
 			case "UGCItemCreated":
 				if(success && itemIDs != null){
 					itemIDs.push(Std.parseInt(data));
 				}
 			case "UGCItemUpdateStarted":
-				trace("UGCItemUpdateStarted success: " + success);
-				trace("UGCItemUpdateStarted data: " + data);
 				if(success){
 					currentItemUpdateHandle = data;
 				}
 			case "UGCItemUpdateSubmitted":
-				if(success){
-					trace("Update submitted succesfully!");
-				}
+			case "UGCLegalAgreementStatus":
 		}
 	}
 
@@ -347,9 +341,6 @@ class SteamWrap
 	private static var SteamWrap_SetUGCItemContent:Dynamic;
 	private static var SteamWrap_SetUGCItemPreviewImage:Dynamic;
 	private static var SteamWrap_SubmitUGCItemUpdate:Dynamic;
-
-
-
 }
 
 class LeaderboardScore
