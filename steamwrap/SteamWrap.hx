@@ -7,6 +7,13 @@ private enum LeaderboardOp
 	DOWNLOAD(id:String);
 }
 
+typedef UploadStatus = {
+	public var updateHandle:String;
+	public var completed:Bool;
+	public var success:Bool;
+	public var eResult:Int;
+}
+
 class SteamWrap
 {
 	public static var active(default,null):Bool = false;
@@ -28,6 +35,8 @@ class SteamWrap
 	public static var itemIDs:Array<Int>;
 
 	static var currentItemUpdateHandle:String;
+
+	public static var currentUploadStatus:UploadStatus;
 
 	public static function init(appId_:Int)
 	{
@@ -99,8 +108,16 @@ class SteamWrap
 	}
 
 	public static function startUpdateUGCItem(itemID:Int){
+		currentUploadStatus = {
+			completed: false,
+			success: false,
+			eResult: 0,
+			updateHandle: ""
+		};
+
 		currentItemUpdateHandle = SteamWrap_StartUpdateUGCItem(appId, itemID);
-		trace(currentItemUpdateHandle);
+
+		currentUploadStatus.updateHandle = currentItemUpdateHandle;
 	}
 
 	public static function submitUGCItemUpdate(changeNotes:String){
@@ -312,6 +329,9 @@ class SteamWrap
 					currentItemUpdateHandle = data;
 				}
 			case "UGCItemUpdateSubmitted":
+				currentUploadStatus.success = success;
+				currentUploadStatus.completed = true;
+				currentUploadStatus.eResult = Std.parseInt(data);
 			case "UGCLegalAgreementStatus":
 		}
 	}
