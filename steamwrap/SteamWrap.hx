@@ -75,6 +75,7 @@ class SteamWrap
 			SteamWrap_SetUGCItemContent = cpp.Lib.load("steamwrap", "SteamWrap_SetUGCItemContent", 2);
 			SteamWrap_SetUGCItemPreviewImage = cpp.Lib.load("steamwrap", "SteamWrap_SetUGCItemPreviewImage", 2);
 			SteamWrap_SubmitUGCItemUpdate = cpp.Lib.load("steamwrap", "SteamWrap_SubmitUGCItemUpdate", 2);
+			SteamWrap_GetCurrentGameLanguage = cpp.Lib.load("steamwrap", "SteamWrap_GetCurrentGameLanguage", 0);
 		}
 		catch (e:Dynamic)
 		{
@@ -261,6 +262,10 @@ class SteamWrap
 		}
 	}
 
+	public static function getCurrentGameLanguage() {
+		return SteamWrap_GetCurrentGameLanguage();
+	}
+
 	public static function onEnterFrame()
 	{
 		if (!active) return;
@@ -361,6 +366,8 @@ class SteamWrap
 	private static var SteamWrap_SetUGCItemContent:Dynamic;
 	private static var SteamWrap_SetUGCItemPreviewImage:Dynamic;
 	private static var SteamWrap_SubmitUGCItemUpdate:Dynamic;
+	private static var SteamWrap_GetCurrentGameLanguage:Dynamic;
+
 }
 
 class LeaderboardScore

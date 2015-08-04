@@ -670,6 +670,15 @@ value SteamWrap_IsSteamRunning()
 DEFINE_PRIM(SteamWrap_IsSteamRunning, 0);
 
 //-----------------------------------------------------------------------------------------------------------
+value SteamWrap_GetCurrentGameLanguage()
+{
+	const char* result = SteamApps()->GetCurrentGameLanguage();
+	return alloc_string(result);
+}
+DEFINE_PRIM(SteamWrap_GetCurrentGameLanguage, 0);
+
+//-----------------------------------------------------------------------------------------------------------
+
 void mylib_main()
 {
     // Initialization code goes here
