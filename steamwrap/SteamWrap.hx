@@ -7,13 +7,6 @@ private enum LeaderboardOp
 	DOWNLOAD(id:String);
 }
 
-typedef UploadStatus = {
-	public var updateHandle:String;
-	public var completed:Bool;
-	public var success:Bool;
-	public var eResult:Int;
-}
-
 class SteamWrap
 {
 	public static var active(default,null):Bool = false;
@@ -23,6 +16,8 @@ class SteamWrap
 	public static var whenLeaderboardScoreDownloaded:LeaderboardScore->Void;
 	public static var whenLeaderboardScoreUploaded:LeaderboardScore->Void;
 	public static var whenTrace:String->Void;
+	public static var whenUGCItemIdReceived:String->Void;
+	public static var whenUGCItemUpdateComplete:Bool->String->Void;
 
 	static var haveGlobalStats:Bool;
 	static var haveReceivedUserStats:Bool;
@@ -31,12 +26,6 @@ class SteamWrap
 
 	static var leaderboardIds:Array<String>;
 	static var leaderboardOps:List<LeaderboardOp>;
-
-	public static var itemIDs:Array<Int>;
-
-	static var currentItemUpdateHandle:String;
-
-	public static var currentUploadStatus:UploadStatus;
 
 	public static function init(appId_:Int)
 	{
@@ -108,47 +97,38 @@ class SteamWrap
 		SteamWrap_Shutdown();
 	}
 
-	public static function startUpdateUGCItem(itemID:Int){
-		currentUploadStatus = {
-			completed: false,
-			success: false,
-			eResult: 0,
-			updateHandle: ""
-		};
-
-		currentItemUpdateHandle = SteamWrap_StartUpdateUGCItem(appId, itemID);
-
-		currentUploadStatus.updateHandle = currentItemUpdateHandle;
+	public static function startUpdateUGCItem(itemID:Int): String{
+		return SteamWrap_StartUpdateUGCItem(appId, itemID);
 	}
 
-	public static function submitUGCItemUpdate(changeNotes:String){
-		SteamWrap_SubmitUGCItemUpdate(currentItemUpdateHandle, changeNotes);
+	public static function submitUGCItemUpdate(updateHandle:String, changeNotes:String){
+		SteamWrap_SubmitUGCItemUpdate(updateHandle, changeNotes);
 	}
 
-	public static function setUGCItemTitle(itemTitle:String):Bool {
-		return SteamWrap_SetUGCItemTitle(currentItemUpdateHandle, itemTitle.substr(0, 128));
+	public static function setUGCItemTitle(updateHandle:String, itemTitle:String):Bool {
+		return SteamWrap_SetUGCItemTitle(updateHandle, itemTitle.substr(0, 128));
 	}
 
-	public static function setUGCItemDescription(itemDesc:String):Bool {
-		return SteamWrap_SetUGCItemDescription(currentItemUpdateHandle, itemDesc.substr(0, 8000));
+	public static function setUGCItemDescription(updateHandle:String, itemDesc:String):Bool {
+		return SteamWrap_SetUGCItemDescription(updateHandle, itemDesc.substr(0, 8000));
 	}
 
-	public static function setUGCItemVisibility(visibility:Int):Bool {
+	public static function setUGCItemVisibility(updateHandle:String, visibility:Int):Bool {
 		/*
 		* 	https://partner.steamgames.com/documentation/ugc
 		*	0 : Public
 		*	1 : Friends Only
 		*	2 : Private
 		*/
-		return SteamWrap_SetUGCItemVisibility(currentItemUpdateHandle, visibility);
+		return SteamWrap_SetUGCItemVisibility(updateHandle, visibility);
 	}
 
-	public static function setUGCItemContent(absPath:String):Bool {
-		return SteamWrap_SetUGCItemContent(currentItemUpdateHandle, absPath);
+	public static function setUGCItemContent(updateHandle:String, absPath:String):Bool {
+		return SteamWrap_SetUGCItemContent(updateHandle, absPath);
 	}
 
-	public static function setUGCItemPreviewImage(absPath:String):Bool {
-		return SteamWrap_SetUGCItemPreviewImage(currentItemUpdateHandle, absPath);
+	public static function setUGCItemPreviewImage(updateHandle:String, absPath:String):Bool {
+		return SteamWrap_SetUGCItemPreviewImage(updateHandle, absPath);
 	}
 
 	public static function createUGCItem(){
@@ -326,17 +306,13 @@ class SteamWrap
 				}
 				processNextLeaderboardOp();
 			case "UGCItemCreated":
-				if(success && itemIDs != null){
-					itemIDs.push(Std.parseInt(data));
-				}
-			case "UGCItemUpdateStarted":
-				if(success){
-					currentItemUpdateHandle = data;
+				if (success && whenUGCItemIdReceived != null){
+					whenUGCItemIdReceived(data);
 				}
 			case "UGCItemUpdateSubmitted":
-				currentUploadStatus.success = success;
-				currentUploadStatus.completed = true;
-				currentUploadStatus.eResult = Std.parseInt(data);
+				if (whenUGCItemUpdateComplete != null){
+					whenUGCItemUpdateComplete(success, data);
+				}
 			case "UGCLegalAgreementStatus":
 		}
 	}
