@@ -35,7 +35,6 @@ class SteamWrap
 		appId = appId_;
 		leaderboardIds = new Array<String>();
 		leaderboardOps = new List<LeaderboardOp>();
-		itemIDs = new Array<Int>();
 
 		try
 		{
