@@ -449,7 +449,6 @@ value SteamWrap_SetUGCItemTitle(value updateHandle, value title)
 	{
 		return alloc_bool(false);
 	}
-
 	bool result = SteamUGC()->SetItemTitle(updateHandle64, val_string(title));
 	return alloc_bool(result);
 }

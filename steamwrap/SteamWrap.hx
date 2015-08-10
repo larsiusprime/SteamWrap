@@ -100,8 +100,8 @@ class SteamWrap
 		return SteamWrap_StartUpdateUGCItem(appId, itemID);
 	}
 
-	public static function submitUGCItemUpdate(updateHandle:String, changeNotes:String){
-		SteamWrap_SubmitUGCItemUpdate(updateHandle, changeNotes);
+	public static function submitUGCItemUpdate(updateHandle:String, changeNotes:String):Bool {
+		return SteamWrap_SubmitUGCItemUpdate(updateHandle, changeNotes);
 	}
 
 	public static function setUGCItemTitle(updateHandle:String, itemTitle:String):Bool {
