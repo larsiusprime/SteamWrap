@@ -417,6 +417,22 @@ value SteamWrap_SubmitUGCItemUpdate(value updateHandle, value changeNotes)
 DEFINE_PRIM(SteamWrap_SubmitUGCItemUpdate, 2);
 
 //-----------------------------------------------------------------------------------------------------------
+value SteamWrap_OpenOverlay(value url)
+{
+	if (!val_is_string(url) || !CheckInit())
+	{
+		return alloc_bool(false);
+	}
+
+
+	std::ostringstream urlStream;
+	urlStream << url;
+
+	SteamFriends()->ActivateGameOverlayToWebPage(urlStream.str().c_str());
+	return alloc_bool(true);
+}
+DEFINE_PRIM(SteamWrap_OpenOverlay, 1);
+//-----------------------------------------------------------------------------------------------------------
 value SteamWrap_StartUpdateUGCItem(value id, value itemID)
 {
 	if (!val_is_int(id)  || !val_is_int(itemID) || !CheckInit())

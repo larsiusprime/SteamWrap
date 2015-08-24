@@ -64,6 +64,8 @@ class SteamWrap
 			SteamWrap_SetUGCItemPreviewImage = cpp.Lib.load("steamwrap", "SteamWrap_SetUGCItemPreviewImage", 2);
 			SteamWrap_SubmitUGCItemUpdate = cpp.Lib.load("steamwrap", "SteamWrap_SubmitUGCItemUpdate", 2);
 			SteamWrap_GetCurrentGameLanguage = cpp.Lib.load("steamwrap", "SteamWrap_GetCurrentGameLanguage", 0);
+			SteamWrap_OpenOverlay = cpp.Lib.load("steamwrap", "SteamWrap_OpenOverlay", 1);
+
 		}
 		catch (e:Dynamic)
 		{
@@ -132,6 +134,10 @@ class SteamWrap
 
 	public static function createUGCItem(){
 		SteamWrap_CreateUGCItem(appId);
+	}
+
+	public static function openOverlay(url:String){
+		SteamWrap_OpenOverlay(url);
 	}
 
 	public static function isSteamRunning()
@@ -342,6 +348,7 @@ class SteamWrap
 	private static var SteamWrap_SetUGCItemPreviewImage:Dynamic;
 	private static var SteamWrap_SubmitUGCItemUpdate:Dynamic;
 	private static var SteamWrap_GetCurrentGameLanguage:Dynamic;
+	private static var SteamWrap_OpenOverlay:Dynamic;
 
 }
 
