@@ -424,11 +424,7 @@ value SteamWrap_OpenOverlay(value url)
 		return alloc_bool(false);
 	}
 
-
-	std::ostringstream urlStream;
-	urlStream << url;
-
-	SteamFriends()->ActivateGameOverlayToWebPage(urlStream.str().c_str());
+	SteamFriends()->ActivateGameOverlayToWebPage(val_string(url));
 	return alloc_bool(true);
 }
 DEFINE_PRIM(SteamWrap_OpenOverlay, 1);
