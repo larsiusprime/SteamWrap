@@ -689,6 +689,47 @@ value SteamWrap_GetCurrentGameLanguage()
 DEFINE_PRIM(SteamWrap_GetCurrentGameLanguage, 0);
 
 //-----------------------------------------------------------------------------------------------------------
+value SteamWrap_InitControllers()
+{
+	printf("steamwrap Init\n");
+	bool result = SteamController()->Init();
+	return alloc_bool(result);
+}
+DEFINE_PRIM(SteamWrap_InitControllers,0);
+
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_ShutdownControllers()
+{
+	bool result = SteamController()->Shutdown();
+	return alloc_bool(result);
+}
+DEFINE_PRIM(SteamWrap_ShutdownControllers,0);
+
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_GetConnectedControllers()
+{
+	SteamController()->RunFrame();
+	
+	ControllerHandle_t handles[STEAM_CONTROLLER_MAX_COUNT];
+	int result = SteamController()->GetConnectedControllers(handles);
+	
+	printf("steamwrap detect %d controllers\n",result);
+	
+	std::ostringstream data;
+	for(int i = 0; i < result; i++) {
+		data << handles[i];
+		printf("handles[%d] = %d\n",i,handles[i]);
+		if(i != result-1) {
+			data << ",";
+		}
+	}
+	
+	return alloc_string(data.str().c_str());
+}
+
+DEFINE_PRIM(SteamWrap_GetConnectedControllers, 0);
+
+//-----------------------------------------------------------------------------------------------------------
 
 void mylib_main()
 {

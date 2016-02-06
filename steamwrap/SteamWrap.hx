@@ -1,4 +1,5 @@
 package steamwrap;
+import cpp.Lib;
 
 private enum LeaderboardOp
 {
@@ -65,6 +66,9 @@ class SteamWrap
 			SteamWrap_SubmitUGCItemUpdate = cpp.Lib.load("steamwrap", "SteamWrap_SubmitUGCItemUpdate", 2);
 			SteamWrap_GetCurrentGameLanguage = cpp.Lib.load("steamwrap", "SteamWrap_GetCurrentGameLanguage", 0);
 			SteamWrap_OpenOverlay = cpp.Lib.load("steamwrap", "SteamWrap_OpenOverlay", 1);
+			SteamWrap_InitControllers = cpp.Lib.load("steamwrap", "SteamWrap_InitControllers", 0);
+			SteamWrap_ShutdownControllers = cpp.Lib.load("steamwrap", "SteamWrap_ShutdownControllers", 0);
+			SteamWrap_GetConnectedControllers = cpp.Lib.load("steamwrap", "SteamWrap_GetConnectedControllers", 0);
 
 		}
 		catch (e:Dynamic)
@@ -250,6 +254,18 @@ class SteamWrap
 	public static function getCurrentGameLanguage() {
 		return SteamWrap_GetCurrentGameLanguage();
 	}
+	
+	public static function initControllers() {
+		return SteamWrap_InitControllers();
+	}
+
+	public static function shutdownControllers() {
+		return SteamWrap_ShutdownControllers();
+	}
+
+	public static function getConnectedControllers() {
+		return SteamWrap_GetConnectedControllers();
+	}
 
 	public static function onEnterFrame()
 	{
@@ -349,7 +365,10 @@ class SteamWrap
 	private static var SteamWrap_SubmitUGCItemUpdate:Dynamic;
 	private static var SteamWrap_GetCurrentGameLanguage:Dynamic;
 	private static var SteamWrap_OpenOverlay:Dynamic;
-
+	private static var SteamWrap_InitControllers:Dynamic;
+	private static var SteamWrap_ShutdownControllers:Dynamic;
+	private static var SteamWrap_GetConnectedControllers:Dynamic;
+	
 }
 
 class LeaderboardScore
