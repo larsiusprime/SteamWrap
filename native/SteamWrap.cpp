@@ -29,6 +29,61 @@ static const char* kEventTypeUGCLegalAgreement = "UGCLegalAgreementStatus";
 static const char* kEventTypeUGCItemCreated = "UGCItemCreated";
 static const char* kEventTypeOnItemUpdateSubmitted = "UGCItemUpdateSubmitted";
 
+//A simple data structure that holds on to the native 64-bit handles and maps them to regular ints.
+//This is because it is cumbersome to pass back 64-bit values over CFFI, and strictly speaking, the haxe 
+//side never needs to know the actual values. So we just store the full 64-bit values locally and pass back 
+//0-based index values which easily fit into a regular int.
+class steamHandleMap
+{
+	//TODO: figure out templating or whatever so I can make typed versions of this like in Haxe (steamHandleMap<ControllerHandle_t>)
+	//      all the steam handle typedefs are just renamed uint64's, but this could always change so to be 100% super safe I should
+	//      figure out the templating stuff.
+	
+	private:
+		std::map<int, uint64> values;
+		std::map<int, uint64>::iterator it;
+		int maxKey;
+		
+	public:
+		
+		void init()
+		{
+			values.clear();
+			maxKey = -1;
+		}
+		
+		bool exists(uint64 val)
+		{
+			return (values.find(val) != values.end());
+		}
+		
+		uint64 get(int index)
+		{
+			return values[index];
+		}
+		
+		//add a unique uint64 value to this data structure & return what index it was stored at
+		int add(uint64 val)
+		{
+			it = values.find(val);
+			
+			//if it already exists just return where it is stored
+			if(it != values.end())
+			{
+				return it->first;
+			}
+			
+			//if it is unique increase our maxKey count and return that
+			maxKey++;
+			values[maxKey] = val;
+			return maxKey;
+		}
+};
+
+static steamHandleMap mapControllers;
+static steamHandleMap mapActionSets;
+static steamHandleMap mapDigitalActions;
+static steamHandleMap mapAnalogActions;
 
 struct Event
 {
@@ -47,6 +102,20 @@ static void SendEvent(const Event& e)
     alloc_field(obj, val_id("success"), alloc_int(e.m_success ? 1 : 0));
     alloc_field(obj, val_id("data"), alloc_string(e.m_data.c_str()));
     val_call1(g_eventHandler->get(), obj);
+}
+
+static value handleToValStr(uint64 handle)
+{
+	std::ostringstream data;
+	data << handle;
+	return alloc_string(data.str().c_str());
+}
+
+static uint64 valStrToHandle(value str)
+{
+	ControllerHandle_t c_handle;
+	sscanf(val_string(str), "%I64x", &c_handle);
+	return c_handle;
 }
 
 //-----------------------------------------------------------------------------------------------------------
@@ -691,8 +760,17 @@ DEFINE_PRIM(SteamWrap_GetCurrentGameLanguage, 0);
 //-----------------------------------------------------------------------------------------------------------
 value SteamWrap_InitControllers()
 {
-	printf("steamwrap Init\n");
 	bool result = SteamController()->Init();
+	
+	if (result)
+	{
+		//clear all our maps
+		mapControllers.init();
+		mapActionSets.init();
+		mapDigitalActions.init();
+		mapAnalogActions.init();
+	}
+	
 	return alloc_bool(result);
 }
 DEFINE_PRIM(SteamWrap_InitControllers,0);
@@ -701,6 +779,14 @@ DEFINE_PRIM(SteamWrap_InitControllers,0);
 value SteamWrap_ShutdownControllers()
 {
 	bool result = SteamController()->Shutdown();
+	if (result)
+	{
+		//clear all our maps
+		mapControllers.init();
+		mapActionSets.init();
+		mapDigitalActions.init();
+		mapAnalogActions.init();
+	}
 	return alloc_bool(result);
 }
 DEFINE_PRIM(SteamWrap_ShutdownControllers,0);
@@ -713,21 +799,112 @@ value SteamWrap_GetConnectedControllers()
 	ControllerHandle_t handles[STEAM_CONTROLLER_MAX_COUNT];
 	int result = SteamController()->GetConnectedControllers(handles);
 	
-	printf("steamwrap detect %d controllers\n",result);
+	std::ostringstream returnData;
 	
-	std::ostringstream data;
-	for(int i = 0; i < result; i++) {
-		data << handles[i];
-		printf("handles[%d] = %d\n",i,handles[i]);
-		if(i != result-1) {
-			data << ",";
+	//store the handles locally and pass back a string representing an int array of unique index lookup values
+	
+	for(int i = 0; i < result; i++)
+	{
+		if(false == mapControllers.exists(handles[i]))
+		{
+			int index = mapControllers.add(handles[i]);
+			returnData << index;
+			if(i != result-1)
+			{
+				returnData << ",";
+			}
 		}
 	}
 	
-	return alloc_string(data.str().c_str());
+	return alloc_string(returnData.str().c_str());
 }
 
 DEFINE_PRIM(SteamWrap_GetConnectedControllers, 0);
+
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_GetActionSetHandle(value actionSetName)
+{
+
+	ControllerActionSetHandle_t handle = SteamController()->GetActionSetHandle(val_string(actionSetName));
+	return alloc_int(mapActionSets.add(handle));
+}
+
+DEFINE_PRIM(SteamWrap_GetActionSetHandle, 1);
+
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_GetDigitalActionHandle(value actionName)
+{
+
+	ControllerDigitalActionHandle_t handle = SteamController()->GetDigitalActionHandle(val_string(actionName));
+	return alloc_int(mapDigitalActions.add(handle));
+}
+
+DEFINE_PRIM(SteamWrap_GetDigitalActionHandle, 1);
+
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_GetAnalogActionHandle(value actionName)
+{
+
+	ControllerAnalogActionHandle_t handle = SteamController()->GetAnalogActionHandle(val_string(actionName));
+	return alloc_int(mapAnalogActions.add(handle));
+}
+
+DEFINE_PRIM(SteamWrap_GetAnalogActionHandle, 1);
+
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_GetDigitalActionData(value controllerHandle, value actionHandle)
+{
+	
+	ControllerHandle_t c_handle              = mapControllers.get(val_int(controllerHandle));
+	ControllerDigitalActionHandle_t a_handle = mapDigitalActions.get(val_int(actionHandle));
+	
+	ControllerDigitalActionData_t data = SteamController()->GetDigitalActionData(c_handle, 1);
+	
+	int result = 0;
+	
+	//Take both bools and pack them into an int
+	
+	if(data.bState) {
+		result |= 0x1;
+	}
+	
+	if(data.bActive) {
+		result |= 0x10;
+	}
+	
+	return alloc_int(result);
+}
+
+DEFINE_PRIM(SteamWrap_GetDigitalActionData, 2);
+
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_ActivateActionSet(value controllerHandle, value actionSetHandle)
+{
+	
+	ControllerHandle_t c_handle          = mapControllers.get(val_int(controllerHandle));
+	ControllerActionSetHandle_t a_handle = mapActionSets.get(val_int(actionSetHandle));
+	
+	SteamController()->ActivateActionSet(c_handle, a_handle);
+	
+	return alloc_bool(true);
+}
+
+DEFINE_PRIM(SteamWrap_ActivateActionSet, 2);
+
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_GetCurrentActionSet(value controllerHandle)
+{
+	ControllerHandle_t c_handle = mapControllers.get(val_int(controllerHandle));
+	
+	ControllerActionSetHandle_t a_handle = SteamController()->GetCurrentActionSet(c_handle);
+	
+	return alloc_int(a_handle);
+}
+
+DEFINE_PRIM(SteamWrap_GetCurrentActionSet, 1);
+
+
+
 
 //-----------------------------------------------------------------------------------------------------------
 

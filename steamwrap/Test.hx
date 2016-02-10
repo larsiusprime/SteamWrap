@@ -2,37 +2,76 @@ import steamwrap.SteamWrap;
 
 class Test
 {
-    static function main()
-    {
-    	trace("Start");
+	static function main()
+	{
+		trace("Start");
 
-    	SteamWrap.init(PUT STEAM APP ID HERE);
-    	SteamWrap.whenAchievementStored = steamWrap_onAchievementStored;
-        SteamWrap.whenLeaderboardScoreDownloaded = steamWrap_onLeaderboardScoreDownloaded;
+		SteamWrap.init(PUT STEAM APP ID HERE);
+		SteamWrap.whenAchievementStored = steamWrap_onAchievementStored;
+		SteamWrap.whenLeaderboardScoreDownloaded = steamWrap_onLeaderboardScoreDownloaded;
 
-    	//var achs = [ "ACH_TOKEN_ANTEGRIA", "ACH_TOKEN_REPUBLIA", "ACH_TOKEN_IMPOR", "ACH_TOKEN_OBRISTAN" ];
-    	//for (ach in achs) SteamWrap.clearAchievement(ach);
-    	//for (ach in achs) SteamWrap.setAchievement(ach);
-    	var leaderboardIds = [ "LB_ENDLESS_C1_TL", "LB_ENDLESS_C1_EN", "LB_ENDLESS_C1_PR" ];
-    	//SteamWrap.registerLeaderboards(leaderboardIds);
-        for (leaderboardId in leaderboardIds)
-            SteamWrap.downloadLeaderboardScore(leaderboardId);
+		var achs = ["YOUR", "ACHIEVEMENT", "IDS", "GO", "HERE"];
 
-    	while (true)
-    	{
-    		SteamWrap.onEnterFrame();
-    		Sys.sleep(0.1);
-    	}
-    }
+		for (ach in achs) SteamWrap.clearAchievement(ach);
+		for (ach in achs) SteamWrap.setAchievement(ach);
+		
+		var leaderBoardIds = ["YOUR", "LEADERBOARD", "IDS", "GO", "HERE"];
+		SteamWrap.registerLeaderboards(leaderboardIds);
+		for (leaderboardId in leaderboardIds)
+		{
+			SteamWrap.downloadLeaderboardScore(leaderboardId); (o
+		}
+		
+		var init = SteamWrap.initControllers();
+		var controllers:Array<Int> = SteamWrap.getConnectedControllers();
+		
+		trace("controllers = " + controllers);
+		
+		var inGameControls = SteamWrap.getActionSetHandle("InGameControls");
+		var menuControls = SteamWrap.getActionSetHandle("MenuControls");
+		
+		trace("===ACTION SET HANDLES===");
+		trace("ingame = " + inGameControls + " menu = " + menuControls);
+		
+		var menu_up = SteamWrap.getDigitalActionHandle("menu_up");
+		var menu_down = SteamWrap.getDigitalActionHandle("menu_down");
+		var menu_left = SteamWrap.getDigitalActionHandle("menu_left");
+		var menu_right = SteamWrap.getDigitalActionHandle("menu_right");
+		var fire = SteamWrap.getDigitalActionHandle("fire");
+		var jump = SteamWrap.getDigitalActionHandle("Jump");
+		var pause_menu = SteamWrap.getDigitalActionHandle("pause_menu");
+		var throttle = SteamWrap.getAnalogActionHandle("Throttle");
+		var move = SteamWrap.getAnalogActionHandle("Move");
+		var camera = SteamWrap.getAnalogActionHandle("Camera");
+		
+		trace("===DIGITAL ACTION HANDLES===");
+		trace("menu up = " + menu_up + " down = " + menu_down + " left = " + menu_left + " right = " + menu_right);
+		trace("fire = " + fire + " jump = " + jump);
+		trace("pause_menu = " + pause_menu);
+		
+		trace("===ANALOG ACTION HANDLES===");
+		trace("throttle = " + throttle + " move = " + move + " camera = " + camera);
+		
+		while (true)
+		{
+			SteamWrap.onEnterFrame();
+			Sys.sleep(0.1);
+			SteamWrap.activateActionSet(controllers[0], inGameControls);
+			var currentActionSet = SteamWrap.getCurrentActionSet(controllers[0]);
+			trace("current action set = " + currentActionSet);
+			var fireData = SteamWrap.getDigitalActionData(controllers[0], fire);
+			trace("fireData = " + StringTools.hex(fireData,2) + " bState = " + fireData.bState + " bActive = " + fireData.bActive);
+		}
+	}
 
-    private static function steamWrap_onAchievementStored(id:String)
-    {
-    	trace("Achievement stored: " + id);
-    }
+	private static function steamWrap_onAchievementStored(id:String)
+	{
+		trace("Achievement stored: " + id);
+	}
 
-    private static function steamWrap_onLeaderboardScoreDownloaded(score:steamwrap.SteamWrap.LeaderboardScore)
-    {
-        trace("Leaderboard score downloaded: " + score.toString());
-    }
+	private static function steamWrap_onLeaderboardScoreDownloaded(score:steamwrap.SteamWrap.LeaderboardScore)
+	{
+		trace("Leaderboard score downloaded: " + score.toString());
+	}
 }
 

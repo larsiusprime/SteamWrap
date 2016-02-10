@@ -1,5 +1,6 @@
 package steamwrap;
 import cpp.Lib;
+import haxe.Int64;
 
 private enum LeaderboardOp
 {
@@ -8,8 +9,14 @@ private enum LeaderboardOp
 	DOWNLOAD(id:String);
 }
 
+typedef ControllerHandle = Int64;
+typedef ControllerActionSetHandle = Int;
+typedef ControllerDigitalActionHandle = Int;
+typedef ControllerAnalogActionHandle = Int;
+
 class SteamWrap
 {
+	
 	public static var active(default,null):Bool = false;
 	public static var wantQuit(default,null):Bool = false;
 
@@ -69,7 +76,12 @@ class SteamWrap
 			SteamWrap_InitControllers = cpp.Lib.load("steamwrap", "SteamWrap_InitControllers", 0);
 			SteamWrap_ShutdownControllers = cpp.Lib.load("steamwrap", "SteamWrap_ShutdownControllers", 0);
 			SteamWrap_GetConnectedControllers = cpp.Lib.load("steamwrap", "SteamWrap_GetConnectedControllers", 0);
-
+			SteamWrap_GetActionSetHandle = cpp.Lib.load("steamwrap", "SteamWrap_GetActionSetHandle", 1);
+			SteamWrap_GetDigitalActionHandle = cpp.Lib.load("steamwrap", "SteamWrap_GetDigitalActionHandle", 1);
+			SteamWrap_GetAnalogActionHandle = cpp.Lib.load("steamwrap", "SteamWrap_GetAnalogActionHandle", 1);
+			SteamWrap_GetDigitalActionData = cpp.Lib.load("steamwrap", "SteamWrap_GetDigitalActionData", 2);
+			SteamWrap_ActivateActionSet = cpp.Lib.load("steamwrap", "SteamWrap_ActivateActionSet", 2);
+			SteamWrap_GetCurrentActionSet = cpp.Lib.load("steamwrap", "SteamWrap_GetCurrentActionSet", 1);
 		}
 		catch (e:Dynamic)
 		{
@@ -263,10 +275,40 @@ class SteamWrap
 		return SteamWrap_ShutdownControllers();
 	}
 
-	public static function getConnectedControllers() {
-		return SteamWrap_GetConnectedControllers();
+	public static function getConnectedControllers():Array<Int> {
+		var str = SteamWrap_GetConnectedControllers();
+		var arrStr:Array<String> = str.split(",");
+		var intStr = [];
+		for (astr in arrStr) {
+			intStr.push(Std.parseInt(astr));
+		}
+		return intStr;
 	}
-
+	
+	public static function getActionSetHandle(actionSetName:String):Int{
+		return SteamWrap_GetActionSetHandle(actionSetName);
+	}
+	
+	public static function getDigitalActionHandle(actionName:String):Int{
+		return SteamWrap_GetDigitalActionHandle(actionName);
+	}
+	
+	public static function getAnalogActionHandle(actionName):Int{
+		return SteamWrap_GetAnalogActionHandle(actionName);
+	}
+	
+	public static function getDigitalActionData(controller:Int, action:Int){
+		return new ControllerDigitalActionData(SteamWrap_GetDigitalActionData(controller, action));
+	}
+	
+	public static function activateActionSet(controller:Int, actionSet:Int) {
+		return SteamWrap_ActivateActionSet(controller, actionSet);
+	}
+	
+	public static function getCurrentActionSet(controllerHandle:Int){
+		return SteamWrap_GetCurrentActionSet(controllerHandle);
+	}
+	
 	public static function onEnterFrame()
 	{
 		if (!active) return;
@@ -368,6 +410,12 @@ class SteamWrap
 	private static var SteamWrap_InitControllers:Dynamic;
 	private static var SteamWrap_ShutdownControllers:Dynamic;
 	private static var SteamWrap_GetConnectedControllers:Dynamic;
+	private static var SteamWrap_GetActionSetHandle:Dynamic;
+	private static var SteamWrap_GetDigitalActionHandle:Dynamic;
+	private static var SteamWrap_GetAnalogActionHandle:Dynamic;
+	private static var SteamWrap_GetDigitalActionData:Dynamic;
+	private static var SteamWrap_ActivateActionSet:Dynamic;
+	private static var SteamWrap_GetCurrentActionSet:Dynamic;
 	
 }
 
@@ -401,4 +449,15 @@ class LeaderboardScore
 	}
 }
 
-
+abstract ControllerDigitalActionData(Int) from Int to Int{
+  
+  public function new(i:Int) {
+    this = i;
+  }
+  
+  public var bState(get, never):Bool;
+  private function get_bState():Bool{return this & 0x1 == 0x1;}
+  
+  public var bActive(get, never):Bool;
+  private function get_bActive():Bool{return this & 0x10 == 0x10;}
+}
