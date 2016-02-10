@@ -1,5 +1,6 @@
 #define IMPLEMENT_API
 #include <hx/CFFI.h>
+#include <hx/CFFIPrime.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -818,45 +819,41 @@ value SteamWrap_GetConnectedControllers()
 	
 	return alloc_string(returnData.str().c_str());
 }
-
-DEFINE_PRIM(SteamWrap_GetConnectedControllers, 0);
+DEFINE_PRIM(SteamWrap_GetConnectedControllers,0);
 
 //-----------------------------------------------------------------------------------------------------------
-value SteamWrap_GetActionSetHandle(value actionSetName)
+int SteamWrap_GetActionSetHandle(const char * actionSetName)
 {
 
-	ControllerActionSetHandle_t handle = SteamController()->GetActionSetHandle(val_string(actionSetName));
-	return alloc_int(mapActionSets.add(handle));
+	ControllerActionSetHandle_t handle = SteamController()->GetActionSetHandle(actionSetName);
+	return mapActionSets.add(handle);
 }
-
-DEFINE_PRIM(SteamWrap_GetActionSetHandle, 1);
+DEFINE_PRIME1(SteamWrap_GetActionSetHandle);
 
 //-----------------------------------------------------------------------------------------------------------
-value SteamWrap_GetDigitalActionHandle(value actionName)
+int SteamWrap_GetDigitalActionHandle(const char * actionName)
 {
 
-	ControllerDigitalActionHandle_t handle = SteamController()->GetDigitalActionHandle(val_string(actionName));
-	return alloc_int(mapDigitalActions.add(handle));
+	ControllerDigitalActionHandle_t handle = SteamController()->GetDigitalActionHandle(actionName);
+	return mapDigitalActions.add(handle);
 }
-
-DEFINE_PRIM(SteamWrap_GetDigitalActionHandle, 1);
+DEFINE_PRIME1(SteamWrap_GetDigitalActionHandle);
 
 //-----------------------------------------------------------------------------------------------------------
-value SteamWrap_GetAnalogActionHandle(value actionName)
+int SteamWrap_GetAnalogActionHandle(const char * actionName)
 {
 
-	ControllerAnalogActionHandle_t handle = SteamController()->GetAnalogActionHandle(val_string(actionName));
-	return alloc_int(mapAnalogActions.add(handle));
+	ControllerAnalogActionHandle_t handle = SteamController()->GetAnalogActionHandle(actionName);
+	return mapAnalogActions.add(handle);
 }
-
-DEFINE_PRIM(SteamWrap_GetAnalogActionHandle, 1);
+DEFINE_PRIME1(SteamWrap_GetAnalogActionHandle);
 
 //-----------------------------------------------------------------------------------------------------------
-value SteamWrap_GetDigitalActionData(value controllerHandle, value actionHandle)
+int SteamWrap_GetDigitalActionData(int controllerHandle, int actionHandle)
 {
 	
-	ControllerHandle_t c_handle              = mapControllers.get(val_int(controllerHandle));
-	ControllerDigitalActionHandle_t a_handle = mapDigitalActions.get(val_int(actionHandle));
+	ControllerHandle_t c_handle              = mapControllers.get(controllerHandle);
+	ControllerDigitalActionHandle_t a_handle = mapDigitalActions.get(actionHandle);
 	
 	ControllerDigitalActionData_t data = SteamController()->GetDigitalActionData(c_handle, 1);
 	
@@ -872,36 +869,33 @@ value SteamWrap_GetDigitalActionData(value controllerHandle, value actionHandle)
 		result |= 0x10;
 	}
 	
-	return alloc_int(result);
+	return result;
 }
-
-DEFINE_PRIM(SteamWrap_GetDigitalActionData, 2);
+DEFINE_PRIME2(SteamWrap_GetDigitalActionData);
 
 //-----------------------------------------------------------------------------------------------------------
-value SteamWrap_ActivateActionSet(value controllerHandle, value actionSetHandle)
+int SteamWrap_ActivateActionSet(int controllerHandle, int actionSetHandle)
 {
 	
-	ControllerHandle_t c_handle          = mapControllers.get(val_int(controllerHandle));
-	ControllerActionSetHandle_t a_handle = mapActionSets.get(val_int(actionSetHandle));
+	ControllerHandle_t c_handle          = mapControllers.get(controllerHandle);
+	ControllerActionSetHandle_t a_handle = mapActionSets.get(actionSetHandle);
 	
 	SteamController()->ActivateActionSet(c_handle, a_handle);
 	
-	return alloc_bool(true);
+	return true;
 }
-
-DEFINE_PRIM(SteamWrap_ActivateActionSet, 2);
+DEFINE_PRIME2(SteamWrap_ActivateActionSet);
 
 //-----------------------------------------------------------------------------------------------------------
-value SteamWrap_GetCurrentActionSet(value controllerHandle)
+int SteamWrap_GetCurrentActionSet(int controllerHandle)
 {
-	ControllerHandle_t c_handle = mapControllers.get(val_int(controllerHandle));
+	ControllerHandle_t c_handle = mapControllers.get(controllerHandle);
 	
 	ControllerActionSetHandle_t a_handle = SteamController()->GetCurrentActionSet(c_handle);
 	
-	return alloc_int(a_handle);
+	return a_handle;
 }
-
-DEFINE_PRIM(SteamWrap_GetCurrentActionSet, 1);
+DEFINE_PRIME1(SteamWrap_GetCurrentActionSet);
 
 
 
