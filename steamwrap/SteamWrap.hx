@@ -75,7 +75,6 @@ class SteamWrap
 			SteamWrap_OpenOverlay = cpp.Lib.load("steamwrap", "SteamWrap_OpenOverlay", 1);
 			SteamWrap_InitControllers = cpp.Lib.load("steamwrap", "SteamWrap_InitControllers", 0);
 			SteamWrap_ShutdownControllers = cpp.Lib.load("steamwrap", "SteamWrap_ShutdownControllers", 0);
-			
 			SteamWrap_GetConnectedControllers = cpp.Lib.load("steamwrap", "SteamWrap_GetConnectedControllers", 0);
 			/*
 			SteamWrap_GetActionSetHandle = cpp.Lib.load("steamwrap", "SteamWrap_GetActionSetHandle", 1);
@@ -279,8 +278,7 @@ class SteamWrap
 	}
 
 	public static function getConnectedControllers():Array<Int> {
-		var str:String = SteamWrap_GetConnectedControllers.call();
-		trace("hx controllers = " + str);
+		var str:String = SteamWrap_GetConnectedControllers();
 		var arrStr:Array<String> = str.split(",");
 		var intStr = [];
 		for (astr in arrStr) {
@@ -289,19 +287,19 @@ class SteamWrap
 		return intStr;
 	}
 	
-	public static function getActionSetHandle(actionSetName:String):Int{
+	public static function getActionSetHandle(actionSetName:String):Int {
 		return SteamWrap_GetActionSetHandle.call(actionSetName);
 	}
 	
-	public static function getDigitalActionHandle(actionName:String):Int{
+	public static function getDigitalActionHandle(actionName:String):Int {
 		return SteamWrap_GetDigitalActionHandle.call(actionName);
 	}
 	
-	public static function getAnalogActionHandle(actionName:String):Int{
+	public static function getAnalogActionHandle(actionName:String):Int {
 		return SteamWrap_GetAnalogActionHandle.call(actionName);
 	}
 	
-	public static function getDigitalActionData(controller:Int, action:Int){
+	public static function getDigitalActionData(controller:Int, action:Int) {
 		return new ControllerDigitalActionData(SteamWrap_GetDigitalActionData.call(controller, action));
 	}
 	
@@ -309,7 +307,7 @@ class SteamWrap
 		return SteamWrap_ActivateActionSet.call(controller, actionSet);
 	}
 	
-	public static function getCurrentActionSet(controllerHandle:Int){
+	public static function getCurrentActionSet(controllerHandle:Int) {
 		return SteamWrap_GetCurrentActionSet.call(controllerHandle);
 	}
 	
@@ -416,12 +414,12 @@ class SteamWrap
 	
 	private static var SteamWrap_GetConnectedControllers:Dynamic;
 	// = Loader.load("SteamWrap_GetConnectedControllers", "vc");
-	private static var SteamWrap_GetActionSetHandle      = Loader.load("SteamWrap_GetConnectedControllers","ci");
-	private static var SteamWrap_GetDigitalActionHandle  = Loader.load("SteamWrap_GetConnectedControllers","ci");
-	private static var SteamWrap_GetAnalogActionHandle   = Loader.load("SteamWrap_GetConnectedControllers","ci");
-	private static var SteamWrap_ActivateActionSet       = Loader.load("SteamWrap_GetConnectedControllers","iii");
-	private static var SteamWrap_GetCurrentActionSet     = Loader.load("SteamWrap_GetConnectedControllers","ii");
-	private static var SteamWrap_GetDigitalActionData    = Loader.load("SteamWrap_GetConnectedControllers","iii");
+	private static var SteamWrap_GetActionSetHandle      = Loader.load("SteamWrap_GetActionSetHandle","ci");
+	private static var SteamWrap_GetDigitalActionHandle  = Loader.load("SteamWrap_GetDigitalActionHandle","ci");
+	private static var SteamWrap_GetAnalogActionHandle   = Loader.load("SteamWrap_GetAnalogActionHandle","ci");
+	private static var SteamWrap_ActivateActionSet       = Loader.load("SteamWrap_ActivateActionSet","iii");
+	private static var SteamWrap_GetCurrentActionSet     = Loader.load("SteamWrap_GetCurrentActionSet","ii");
+	private static var SteamWrap_GetDigitalActionData    = Loader.load("SteamWrap_GetDigitalActionData","iii");
 	
 }
 
