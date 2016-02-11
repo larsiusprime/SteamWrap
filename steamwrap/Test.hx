@@ -49,8 +49,32 @@ class Test
 		trace("fire = " + fire + " jump = " + jump);
 		trace("pause_menu = " + pause_menu);
 		
+		var fireOrigins:Array<EControllerActionOrigin> = [];
+		var fireOriginCount = SteamWrap.getDigitalActionOrigins(controllers[0], inGameControls, fire, fireOrigins);
+		
+		trace("===DIGITAL ACTION ORIGINS===");
+		trace("fire: count = " + fireOriginCount + " origins = " + fireOrigins);
+		
+		for (origin in fireOrigins) {
+			if (origin != NONE) {
+				trace("glpyh = " + Std.string(origin).toLowerCase());
+			}
+		}
+		
 		trace("===ANALOG ACTION HANDLES===");
 		trace("throttle = " + throttle + " move = " + move + " camera = " + camera);
+		
+		var moveOrigins:Array<EControllerActionOrigin> = [];
+		var moveOriginCount = SteamWrap.getAnalogActionOrigins(controllers[0], inGameControls, move, moveOrigins);
+		
+		trace("===ANALOG ACTION ORIGINS===");
+		trace("move: count = " + moveOriginCount + " origins = " + moveOrigins);
+		
+		for (origin in moveOrigins) {
+			if (origin != NONE) {
+				trace("glpyh = " + Std.string(origin).toLowerCase());
+			}
+		}
 		
 		while (true)
 		{
@@ -59,8 +83,12 @@ class Test
 			SteamWrap.activateActionSet(controllers[0], inGameControls);
 			var currentActionSet = SteamWrap.getCurrentActionSet(controllers[0]);
 			trace("current action set = " + currentActionSet);
+			
 			var fireData = SteamWrap.getDigitalActionData(controllers[0], fire);
-			trace("fireData = " + StringTools.hex(fireData,2) + " bState = " + fireData.bState + " bActive = " + fireData.bActive);
+			trace("fireData: bState = " + fireData.bState + " bActive = " + fireData.bActive);
+			
+			var moveData = SteamWrap.getAnalogActionData(controllers[0], move);
+			trace("moveData: eMode = " + moveData.eMode + " x/y = "+ moveData.x + "/" + moveData.y + " bActive = " + moveData.bActive);
 		}
 	}
 

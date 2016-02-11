@@ -53,7 +53,6 @@ class SteamWrap
 			SteamWrap_GetStat = cpp.Lib.load("steamwrap", "SteamWrap_GetStat", 1);
 			SteamWrap_SetStat = cpp.Lib.load("steamwrap", "SteamWrap_SetStat", 2);
 			SteamWrap_SetAchievement = cpp.Lib.load("steamwrap", "SteamWrap_SetAchievement", 1);
-			SteamWrap_ClearAchievement = cpp.Lib.load("steamwrap", "SteamWrap_ClearAchievement", 1);
 			SteamWrap_IndicateAchievementProgress = cpp.Lib.load("steamwrap", "SteamWrap_IndicateAchievementProgress", 3);
 			SteamWrap_StoreStats = cpp.Lib.load("steamwrap", "SteamWrap_StoreStats", 0);
 			SteamWrap_FindLeaderboard = cpp.Lib.load("steamwrap", "SteamWrap_FindLeaderboard", 1);
@@ -76,14 +75,8 @@ class SteamWrap
 			SteamWrap_InitControllers = cpp.Lib.load("steamwrap", "SteamWrap_InitControllers", 0);
 			SteamWrap_ShutdownControllers = cpp.Lib.load("steamwrap", "SteamWrap_ShutdownControllers", 0);
 			SteamWrap_GetConnectedControllers = cpp.Lib.load("steamwrap", "SteamWrap_GetConnectedControllers", 0);
-			/*
-			SteamWrap_GetActionSetHandle = cpp.Lib.load("steamwrap", "SteamWrap_GetActionSetHandle", 1);
-			SteamWrap_GetDigitalActionHandle = cpp.Lib.load("steamwrap", "SteamWrap_GetDigitalActionHandle", 1);
-			SteamWrap_GetAnalogActionHandle = cpp.Lib.load("steamwrap", "SteamWrap_GetAnalogActionHandle", 1);
-			SteamWrap_GetDigitalActionData = cpp.Lib.load("steamwrap", "SteamWrap_GetDigitalActionData", 2);
-			SteamWrap_ActivateActionSet = cpp.Lib.load("steamwrap", "SteamWrap_ActivateActionSet", 2);
-			SteamWrap_GetCurrentActionSet = cpp.Lib.load("steamwrap", "SteamWrap_GetCurrentActionSet", 1);
-			*/
+			SteamWrap_GetDigitalActionOrigins = cpp.Lib.load("steamwrap", "SteamWrap_GetDigitalActionOrigins", 3);
+			SteamWrap_GetAnalogActionOrigins = cpp.Lib.load("steamwrap", "SteamWrap_GetAnalogActionOrigins", 3);
 		}
 		catch (e:Dynamic)
 		{
@@ -107,6 +100,7 @@ class SteamWrap
 			// restart under Steam
 			wantQuit = true;
 		}
+		
 		#end
 	}
 
@@ -277,6 +271,14 @@ class SteamWrap
 		return SteamWrap_ShutdownControllers();
 	}
 
+	/**
+	 * Returns an array of integer handles for polling controller data
+	 * 
+	 * NOTE: the native steam controller handles are uint64's and too large to easily pass to Haxe,
+	 * so the "true" values are left on the C++ side and haxe only deals with 0-based integer indeces
+	 * that map back to the "true" values on the C++ side
+	 * @return
+	 */
 	public static function getConnectedControllers():Array<Int> {
 		var str:String = SteamWrap_GetConnectedControllers();
 		var arrStr:Array<String> = str.split(",");
@@ -287,27 +289,151 @@ class SteamWrap
 		return intStr;
 	}
 	
+	/**
+	 * Get the integer handle for a Steam Controller action set
+	 * 
+	 * NOTE: per the Steam API documentation, you must first define a game_actions_X.vdf file
+	 * and configure that properly for any action sets to be recognized
+	 * 
+	 * @param	actionSetName
+	 * @return
+	 */
 	public static function getActionSetHandle(actionSetName:String):Int {
 		return SteamWrap_GetActionSetHandle.call(actionSetName);
 	}
 	
+	/**
+	 * Get the integer handle of a digital (on/off) action
+	 * 
+	 * @param	actionName
+	 * @return
+	 */
 	public static function getDigitalActionHandle(actionName:String):Int {
 		return SteamWrap_GetDigitalActionHandle.call(actionName);
 	}
 	
+	/**
+	 * Get the analog handle of an analog (continuous value) action
+	 * 
+	 * @param	actionName
+	 * @return
+	 */
 	public static function getAnalogActionHandle(actionName:String):Int {
 		return SteamWrap_GetAnalogActionHandle.call(actionName);
 	}
 	
-	public static function getDigitalActionData(controller:Int, action:Int) {
+	/**
+	 * Returns the current state of the supplied digital game action
+	 * 
+	 * @param	controller	integer handle for the controller you want to check
+	 * @param	action	integer handle for the action you want to check
+	 * @return
+	 */
+	public static function getDigitalActionData(controller:Int, action:Int):ControllerDigitalActionData {
 		return new ControllerDigitalActionData(SteamWrap_GetDigitalActionData.call(controller, action));
 	}
 	
+	/**
+	 * Returns the current state of these supplied analog game action
+	 * 
+	 * @param	controller	integer handle for the controller you want to check
+	 * @param	action	integer handle for the action you want to check
+	 * @param	data	an existing ControllerAnalogActionData structure you want to fill (optional) 
+	 * @return
+	 */
+	public static function getAnalogActionData(controller:Int, action:Int, ?data:ControllerAnalogActionData):ControllerAnalogActionData {
+		if (data == null)
+		{
+			data = new ControllerAnalogActionData();
+		}
+		
+		data.bActive = SteamWrap_GetAnalogActionData.call(controller, action);
+		data.eMode = cast SteamWrap_GetAnalogActionData_eMode.call(0);
+		data.x = SteamWrap_GetAnalogActionData_x.call(0);
+		data.y = SteamWrap_GetAnalogActionData_y.call(0);
+		
+		return data;
+	}
+	
+	/**
+	 * Get the origin(s) for a digital action with an action set. Use this to display the appropriate on-screen prompt for the action.
+	 * 
+	 * @param	controller	integer handle for a controller
+	 * @param	actionSet	integer handle for an action set
+	 * @param	action	integer handle for a digital action
+	 * @param	originsOut	array to fill with EControllerActionOrigin values
+	 * @return the number of origins supplied in originsOut.
+	 */
+	
+	public static function getDigitalActionOrigins(controller:Int, actionSet:Int, action:Int, originsOut:Array<EControllerActionOrigin>):Int {
+		
+		var str:String = SteamWrap_GetDigitalActionOrigins(controller, actionSet, action);
+		var strArr:Array<String> = str.split(",");
+		
+		var result = 0;
+		
+		//result is the first value in the array
+		if(strArr != null && strArr.length > 0){
+			result = Std.parseInt(strArr[0]);
+		}
+		
+		if (strArr.length > 1 && originsOut != null) {
+			for (i in 1...strArr.length) {
+				originsOut[i] = strArr[i];
+			}
+		}
+		
+		return result;
+	}
+	
+	/**
+	 * Get the origin(s) for an analog action with an action set. Use this to display the appropriate on-screen prompt for the action.
+	 * 
+	 * @param	controller	integer handle for a controller
+	 * @param	actionSet	integer handle for an action set
+	 * @param	action	integer handle for an analog action
+	 * @param	originsOut	array to fill with EControllerActionOrigin values
+	 * @return the number of origins supplied in originsOut.
+	 */
+	
+	public static function getAnalogActionOrigins(controller:Int, actionSet:Int, action:Int, originsOut:Array<EControllerActionOrigin>):Int {
+		
+		var str:String = SteamWrap_GetAnalogActionOrigins(controller, actionSet, action);
+		var strArr:Array<String> = str.split(",");
+		
+		var result = 0;
+		
+		//result is the first value in the array
+		if(strArr != null && strArr.length > 0){
+			result = Std.parseInt(strArr[0]);
+		}
+		
+		if (strArr.length > 1 && originsOut != null) {
+			for (i in 1...strArr.length) {
+				originsOut[i] = strArr[i];
+			}
+		}
+		
+		return result;
+	}
+	
+	/**
+	 * Activate an action set (only actions belonging to this set will fire from the controller)
+	 * 
+	 * @param	controller	integer handle for the controller you want to check
+	 * @param	actionSet	integer handle for the action set you want activate
+	 */
 	public static function activateActionSet(controller:Int, actionSet:Int) {
 		return SteamWrap_ActivateActionSet.call(controller, actionSet);
 	}
 	
-	public static function getCurrentActionSet(controllerHandle:Int) {
+	/**
+	 * Get the integer handle of the currently active action set
+	 * 
+	 * @param	controllerHandle integer handle for the controller you want to check
+	 * @return	integer handle of the currently active action set
+	 */
+	public static function getCurrentActionSet(controllerHandle:Int):Int {
 		return SteamWrap_GetCurrentActionSet.call(controllerHandle);
 	}
 	
@@ -409,17 +535,25 @@ class SteamWrap
 	private static var SteamWrap_SubmitUGCItemUpdate:Dynamic;
 	private static var SteamWrap_GetCurrentGameLanguage:Dynamic;
 	private static var SteamWrap_OpenOverlay:Dynamic;
+	
 	private static var SteamWrap_InitControllers:Dynamic;
 	private static var SteamWrap_ShutdownControllers:Dynamic;
-	
 	private static var SteamWrap_GetConnectedControllers:Dynamic;
-	// = Loader.load("SteamWrap_GetConnectedControllers", "vc");
+	private static var SteamWrap_GetDigitalActionOrigins:Dynamic;
+	private static var SteamWrap_GetAnalogActionOrigins:Dynamic;
+	
 	private static var SteamWrap_GetActionSetHandle      = Loader.load("SteamWrap_GetActionSetHandle","ci");
 	private static var SteamWrap_GetDigitalActionHandle  = Loader.load("SteamWrap_GetDigitalActionHandle","ci");
 	private static var SteamWrap_GetAnalogActionHandle   = Loader.load("SteamWrap_GetAnalogActionHandle","ci");
 	private static var SteamWrap_ActivateActionSet       = Loader.load("SteamWrap_ActivateActionSet","iii");
 	private static var SteamWrap_GetCurrentActionSet     = Loader.load("SteamWrap_GetCurrentActionSet","ii");
-	private static var SteamWrap_GetDigitalActionData    = Loader.load("SteamWrap_GetDigitalActionData","iii");
+	private static var SteamWrap_GetDigitalActionData    = Loader.load("SteamWrap_GetDigitalActionData", "iii");
+	private static var SteamWrap_GetAnalogActionData     = Loader.load("SteamWrap_GetAnalogActionData", "iii");
+		private static var SteamWrap_GetAnalogActionData_eMode = Loader.load("SteamWrap_GetAnalogActionData_eMode", "ii");
+		private static var SteamWrap_GetAnalogActionData_x     = Loader.load("SteamWrap_GetAnalogActionData_x", "if");
+		private static var SteamWrap_GetAnalogActionData_y     = Loader.load("SteamWrap_GetAnalogActionData_y", "if");
+	
+	
 	
 }
 
@@ -454,14 +588,132 @@ class LeaderboardScore
 }
 
 abstract ControllerDigitalActionData(Int) from Int to Int{
-  
-  public function new(i:Int) {
-    this = i;
-  }
-  
-  public var bState(get, never):Bool;
-  private function get_bState():Bool{return this & 0x1 == 0x1;}
-  
-  public var bActive(get, never):Bool;
-  private function get_bActive():Bool{return this & 0x10 == 0x10;}
+	
+	public function new(i:Int) {
+		this = i;
+	}
+	
+	public var bState(get, never):Bool;
+	private function get_bState():Bool{return this & 0x1 == 0x1;}
+	
+	public var bActive(get, never):Bool;
+	private function get_bActive():Bool{return this & 0x10 == 0x10;}
+}
+
+class ControllerAnalogActionData
+{
+	public var eMode:EControllerSourceMode;
+	public var x:Float;
+	public var y:Float;
+	public var bActive:Int;
+	
+	public function new()
+	{
+		//
+	}
+}
+
+@:enum abstract ESteamControllerPad(Int) {
+	public var Left = 0;
+	public var Right = 1;
+}
+
+@:enum abstract EControllerSource(Int) {
+	public var None = 0;
+	public var LeftTrackpad = 1;
+	public var RightTrackpad = 2;
+	public var Joystick = 3;
+	public var ABXY = 4;
+	public var Switch = 5;
+	public var LeftTrigger = 6;
+	public var RightTrigger = 7;
+	public var Gyro = 8;
+	public var Count = 9;
+}
+
+@:enum abstract EControllerSourceMode(Int) {
+	public var None = 0;
+	public var Dpad = 1;
+	public var Buttons = 2;
+	public var FourButtons = 3;
+	public var AbsoluteMouse = 4;
+	public var RelativeMouse = 5;
+	public var JoystickMove = 6;
+	public var JoystickCamera = 7;
+	public var ScrollWheel = 8;
+	public var Trigger = 9;
+	public var TouchMenu = 10;
+	public var MouseJoystick = 11;
+	public var MouseRegion = 12;
+}
+
+@:enum abstract EControllerActionOrigin(Int) {
+	
+	public static var fromStringMap(default, null):Map<String, EControllerActionOrigin>
+		= MacroHelper.buildMap("steamwrap.EControllerActionOrigin");
+	
+	public static var toStringMap(default, null):Map<EControllerActionOrigin, String>
+		= MacroHelper.buildMap("steamwrap.EControllerActionOrigin", true);
+		
+	public var NONE = 0;
+	public var A = 1;
+	public var B = 2;
+	public var X = 3;
+	public var Y = 4;
+	public var LEFTBUMPER= 5;
+	public var RIGHTBUMPER= 6;
+	public var LEFTGRIP = 7;
+	public var RIGHTGRIP = 8;
+	public var START = 9;
+	public var BACK = 10;
+	public var LEFTPAD_TOUCH = 11;
+	public var LEFTPAD_SWIPE = 12;
+	public var LEFTPAD_CLICK = 13;
+	public var LEFTPAD_DPADNORTH = 14;
+	public var LEFTPAD_DPADSOUTH = 15;
+	public var LEFTPAD_DPADWEST = 16;
+	public var LEFTPAD_DPADEAST = 17;
+	public var RIGHTPAD_TOUCH = 18;
+	public var RIGHTPAD_SWIPE = 19;
+	public var RIGHTPAD_CLICK = 20;
+	public var RIGHTPAD_DPADNORTH = 21;
+	public var RIGHTPAD_DPADSOUTH = 22;
+	public var RIGHTPAD_DPADWEST = 23;
+	public var RIGHTPAD_DPADEAST = 24;
+	public var LEFTTRIGGER_PULL = 25;
+	public var LEFTTRIGGER_CLICK = 26;
+	public var RIGHTTRIGGER_PULL = 27;
+	public var RIGHTTRIGGER_CLICK = 28;
+	public var LEFTSTICK_MOVE = 29;
+	public var LEFTSTICK_CLICK = 30;
+	public var LEFTSTICK_DPADNORTH = 31;
+	public var LEFTSTICK_DPADSOUTH = 32;
+	public var LEFTSTICK_DPADWEST = 33;
+	public var LEFTSTICK_DPADEAST = 34;
+	public var GRYRO_MOVE = 35;
+	public var GRYRO_PITCH = 36;
+	public var GRYRO_YAW = 37;
+	public var GRYRO_ROLL = 38;
+	public var COUNT = 39;
+	
+	@:from private static function fromString (s:String):EControllerActionOrigin{
+		
+		var i = Std.parseInt(s);
+		
+		if (i == null) {
+			
+			//if it's not a numeric value, try to interpret it from its name
+			s = s.toUpperCase();
+			return fromStringMap.exists(s) ? fromStringMap.get(s) : NONE;
+		}
+		
+		return cast Std.int(i);
+		
+	}
+	
+	@:to public inline function toString():String
+	{
+		return toStringMap.get(cast this);
+	}
+	
 }
