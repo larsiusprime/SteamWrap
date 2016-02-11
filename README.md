@@ -125,7 +125,7 @@ Or you can set it up manually:
 
 2. Edit steamwrap/example/Test.hx to include your Steam App ID and achievement ID's, etc.
 
-	Now you are ready to compile example/Test.hx.
+	Now you are ready to compile example/Test.hx. Run the build script again.
 
 3. Start the Steam client, leave it open in the background, and run the Test app to make sure it connects.
 
