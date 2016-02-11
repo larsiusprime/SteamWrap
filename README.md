@@ -44,7 +44,7 @@ Simple Haxe native extension Steam API wrapper. This code originally shipped in 
 	**This extension will automatically create a steam_appid.txt in your binary folder.**
 	**Do not ship your game with this file. Make sure it's stripped during the publishing stage.**
 	
-	**Compiling with the "-Dfinal" flag should suppress creation of the steam_appid.text**
+	**Compiling with the "-Dfinal" flag should suppress creation of the steam_appid.txt**
 	
 	```openfl test windows -Dsteam -Dfinal``` (for instance)
 	
