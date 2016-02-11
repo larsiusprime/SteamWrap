@@ -16,14 +16,12 @@ class Test
 		for (ach in achs) API.clearAchievement(ach);
 		for (ach in achs) API.setAchievement(ach);
 		
-		/*
 		var leaderBoardIds = ["YOUR", "LEADERBOARD", "IDS", "GO", "HERE"];
 		API.registerLeaderboards(leaderboardIds);
 		for (leaderboardId in leaderboardIds)
 		{
 			API.downloadLeaderboardScore(leaderboardId); (o
 		}
-		*/
 		
 		var controllers:Array<Int> = API.controllers.getConnectedControllers();
 		
