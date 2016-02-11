@@ -7,21 +7,23 @@ class Test
 	{
 		trace("Start");
 
-		API.init(PUT STEAM APP ID HERE);
+		API.init(218410);
 		API.whenAchievementStored = steamWrap_onAchievementStored;
 		API.whenLeaderboardScoreDownloaded = steamWrap_onLeaderboardScoreDownloaded;
 
-		var achs = ["YOUR", "ACHIEVEMENT", "IDS", "GO", "HERE"];
+		var achs = ["AZRA_LVL_10", "AZRA_LVL_25", "AZRA_LVL_40"];
 
 		for (ach in achs) API.clearAchievement(ach);
 		for (ach in achs) API.setAchievement(ach);
 		
+		/*
 		var leaderBoardIds = ["YOUR", "LEADERBOARD", "IDS", "GO", "HERE"];
 		API.registerLeaderboards(leaderboardIds);
 		for (leaderboardId in leaderboardIds)
 		{
 			API.downloadLeaderboardScore(leaderboardId); (o
 		}
+		*/
 		
 		var controllers:Array<Int> = API.controllers.getConnectedControllers();
 		

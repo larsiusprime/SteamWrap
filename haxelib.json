@@ -1,0 +1,13 @@
+{
+ "name": "steamwrap",
+ "url" : "https://github.com/larsiusprime/steamwrap",
+ "license": "MIT",
+ "tags": ["steam","game","api"],
+ "description": "API integration for the Steam Client",
+ "version": "1.0.0",
+ "releasenote": "Initial Release",
+ "contributors": ["dukope,grapefrukt,sharkpunch,larsiusprime"],
+ "dependencies": { 
+  "hxcpp": ""
+ }
+}

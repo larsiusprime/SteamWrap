@@ -1,0 +1,11 @@
+Windows:
+steam_api.lib should go in "/win32"
+
+Mac:
+libsteam_api.dylib should go in "/osx64"
+
+Linux:
+64 bit: 
+libsteam_api.so should go in "/linux64"
+32 bit:
+libsteam_api.so should go in "/linux32"
