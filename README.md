@@ -17,7 +17,7 @@ Simple Haxe native extension Steam API wrapper. This code originally shipped in 
 
 1. Install the library:
 
-latest git version:
+    latest git version:
 ```haxelib git steamwrap https://github.com/larsiusprime/SteamWrap```
     
 2. Add the following nodes to your project.xml (assumes OpenFL or NME for now):
