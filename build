@@ -20,7 +20,8 @@ fi
 
 #exit 0
 
-# build test exe
-# cd ..
-# cd steamwrap
-# haxe -cp .. Test.hx -main Test -cpp ../temp/hx/
+# build the example program "Test"
+
+cd ..
+cd example
+haxe -cp .. Test.hx -main Test -cpp ../temp/hx/

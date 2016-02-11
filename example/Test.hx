@@ -6,24 +6,38 @@ class Test
 	static function main()
 	{
 		trace("Start");
-
-		API.init(218410);
+		
+		var appID:Int = -1;			//PUT YOUR APP ID HERE!
+		
+		if (appID == -1)
+		{
+			trace("You need to supply an app ID!");
+			Sys.exit(0);
+		}
+		
+		API.init(appID);
 		API.whenAchievementStored = steamWrap_onAchievementStored;
 		API.whenLeaderboardScoreDownloaded = steamWrap_onLeaderboardScoreDownloaded;
 
-		var achs = ["AZRA_LVL_10", "AZRA_LVL_25", "AZRA_LVL_40"];
-
-		for (ach in achs) API.clearAchievement(ach);
-		for (ach in achs) API.setAchievement(ach);
+		var achs = [];				//PUT SOME ACHIEVEMENTS HERE: ["BEAT_LEVEL_1","BEAT_LEVEL_2"], etc.
 		
-		/*
-		var leaderBoardIds = ["YOUR", "LEADERBOARD", "IDS", "GO", "HERE"];
-		API.registerLeaderboards(leaderboardIds);
-		for (leaderboardId in leaderboardIds)
+		if (achs != null && achs.length > 0)
 		{
-			API.downloadLeaderboardScore(leaderboardId); (o
+			for (ach in achs) API.clearAchievement(ach);
+			for (ach in achs) API.setAchievement(ach);
 		}
-		*/
+		else
+		{
+			trace("You didn't define any achievements to test...");
+		}
+		
+		//The controller code below assumes you have already read the Steam Docs
+		//on controller support and set up the "default" test configuration, so that
+		//you're testing locally with a game_actions_<YOURAPPID>.vdf file
+		//
+		//If you have no clue what this means, READ THE STEAM DOCS!
+		//
+		//It won't crash if you haven't, it just won't work
 		
 		var controllers:Array<Int> = API.controllers.getConnectedControllers();
 		
@@ -51,30 +65,33 @@ class Test
 		trace("fire = " + fire + " jump = " + jump);
 		trace("pause_menu = " + pause_menu);
 		
-		var fireOrigins:Array<EControllerActionOrigin> = [];
-		var fireOriginCount = API.controllers.getDigitalActionOrigins(controllers[0], inGameControls, fire, fireOrigins);
-		
-		trace("===DIGITAL ACTION ORIGINS===");
-		trace("fire: count = " + fireOriginCount + " origins = " + fireOrigins);
-		
-		for (origin in fireOrigins) {
-			if (origin != NONE) {
-				trace("glpyh = " + Std.string(origin).toLowerCase());
+		if (controllers != null && controllers.length > 0)
+		{
+			var fireOrigins:Array<EControllerActionOrigin> = [];
+			var fireOriginCount = API.controllers.getDigitalActionOrigins(controllers[0], inGameControls, fire, fireOrigins);
+			
+			trace("===DIGITAL ACTION ORIGINS===");
+			trace("fire: count = " + fireOriginCount + " origins = " + fireOrigins);
+			
+			for (origin in fireOrigins) {
+				if (origin != NONE) {
+					trace("glpyh = " + Std.string(origin).toLowerCase());
+				}
 			}
-		}
-		
-		trace("===ANALOG ACTION HANDLES===");
-		trace("throttle = " + throttle + " move = " + move + " camera = " + camera);
-		
-		var moveOrigins:Array<EControllerActionOrigin> = [];
-		var moveOriginCount = API.controllers.getAnalogActionOrigins(controllers[0], inGameControls, move, moveOrigins);
-		
-		trace("===ANALOG ACTION ORIGINS===");
-		trace("move: count = " + moveOriginCount + " origins = " + moveOrigins);
-		
-		for (origin in moveOrigins) {
-			if (origin != NONE) {
-				trace("glpyh = " + Std.string(origin).toLowerCase());
+			
+			trace("===ANALOG ACTION HANDLES===");
+			trace("throttle = " + throttle + " move = " + move + " camera = " + camera);
+			
+			var moveOrigins:Array<EControllerActionOrigin> = [];
+			var moveOriginCount = API.controllers.getAnalogActionOrigins(controllers[0], inGameControls, move, moveOrigins);
+			
+			trace("===ANALOG ACTION ORIGINS===");
+			trace("move: count = " + moveOriginCount + " origins = " + moveOrigins);
+			
+			for (origin in moveOrigins) {
+				if (origin != NONE) {
+					trace("glpyh = " + Std.string(origin).toLowerCase());
+				}
 			}
 		}
 		
@@ -82,15 +99,19 @@ class Test
 		{
 			API.onEnterFrame();
 			Sys.sleep(0.1);
-			API.controllers.activateActionSet(controllers[0], inGameControls);
-			var currentActionSet = API.controllers.getCurrentActionSet(controllers[0]);
-			trace("current action set = " + currentActionSet);
 			
-			var fireData = API.controllers.getDigitalActionData(controllers[0], fire);
-			trace("fireData: bState = " + fireData.bState + " bActive = " + fireData.bActive);
-			
-			var moveData = API.controllers.getAnalogActionData(controllers[0], move);
-			trace("moveData: eMode = " + moveData.eMode + " x/y = "+ moveData.x + "/" + moveData.y + " bActive = " + moveData.bActive);
+			if (controllers != null && controllers.length > 0)
+			{
+				API.controllers.activateActionSet(controllers[0], inGameControls);
+				var currentActionSet = API.controllers.getCurrentActionSet(controllers[0]);
+				trace("current action set = " + currentActionSet);
+				
+				var fireData = API.controllers.getDigitalActionData(controllers[0], fire);
+				trace("fireData: bState = " + fireData.bState + " bActive = " + fireData.bActive);
+				
+				var moveData = API.controllers.getAnalogActionData(controllers[0], move);
+				trace("moveData: eMode = " + moveData.eMode + " x/y = " + moveData.x + "/" + moveData.y + " bActive = " + moveData.bActive);
+			}
 		}
 	}
 

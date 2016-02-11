@@ -5,20 +5,20 @@
 	<classpath name="steamwrap" />
 
 	<section if="windows">
-		<template path="native/lib/win32/steam_api.dll" rename="steam_api.dll" />
-		<template path="templates/steam_appid.txt" rename="steam_appid.txt" />
+		<template path="native/lib/win32/steam_api.dll" rename="steam_api.dll"/>
+		<template path="templates/steam_appid.txt" rename="steam_appid.txt" unless="final"/>
 	</section>
 
 	<section if="linux">
 		<!-- Copies into both 32 and 64 bit folders because I haven't found a way to differentiate between them using conditionals in this file -->
 		<template path="native/lib/linux64/libsteam_api.so" rename="../../../linux64/cpp/bin/libsteam_api.so" />
 		<template path="native/lib/linux32/libsteam_api.so" rename="../../../linux/cpp/bin/libsteam_api.so" />
-		<template path="templates/steam_appid.txt" rename="steam_appid.txt" />
+		<template path="templates/steam_appid.txt" rename="steam_appid.txt" unless="final"/>
 	</section>
 
 	<section if="mac">
 		<template path="native/lib/osx32/libsteam_api.dylib" rename="bin/${APP_FILE}.app/Contents/MacOS/libsteam_api.dylib" />
-		<template path="templates/steam_appid.txt" rename="bin/${APP_FILE}.app/Contents/MacOS/steam_appid.txt" />
+		<template path="templates/steam_appid.txt" rename="bin/${APP_FILE}.app/Contents/MacOS/steam_appid.txt" unless="final"/>
 	</section>
 
 </project>
