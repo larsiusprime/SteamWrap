@@ -10,6 +10,7 @@ Simple Haxe native extension Steam API wrapper. This code originally shipped in 
 - Stats (not well-tested)
 
 ~~This repository comes with prebuilt binaries, which means it should work "out of the box".~~
+
 (I'm in the process of updating the binaries, right now all it has is Windows)
 
 #### To include steamwrap.ndll in your OpenFL or NME project:
