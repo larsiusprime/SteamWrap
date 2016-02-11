@@ -116,7 +116,7 @@ Or you can set it up manually:
 	  
 ------------
 
-There are a few final steps:
+**Final Steps:**
 
 1. Run the "build" script (it's a basic haxelib command shortcut). 
 	steamwrap.ndll will be output to ndll/[PLATFORM]
