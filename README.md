@@ -121,15 +121,11 @@ Or you can set it up manually:
 1. Run the "build" script (it's a basic haxelib command shortcut). 
 	steamwrap.ndll will be output to ndll/[PLATFORM]
 
-	That's great, but we want to make sure it works! Let's run something with it.
+	That's great, but we want to make sure it works! Let's run something with it. If you run the Test program now, you'll notice it exits immediately, asking you to supply an app ID.
 
 2. Edit steamwrap/example/Test.hx to include your Steam App ID and achievement ID's, etc.
 
 	Now you are ready to compile example/Test.hx.
-
-	Open the build script ("build.bat" on windows, otherwise just "build"), and look at the comments at the bottom.
-	Uncomment the bottom section as directed.
-	Now when you run the build script, the ndll AND the test program will be created. Look for your "Test" binary in 		ndll/<Platform>, ie, ndll/Windows.
 
 3. Start the Steam client, leave it open in the background, and run the Test app to make sure it connects.
 
