@@ -3,45 +3,22 @@ import cpp.Lib;
 import steamwrap.helpers.Loader;
 import steamwrap.helpers.MacroHelper;
 
+/**
+ * The Steam Controller API. Used by API.hx, should never be created manually by the user.
+ * API.hx creates and initializes this by default.
+ * Access it via API.controller static variable
+ */
+
+@:allow(steamwrap.API)
 class ControllerAPI
 {
+	/*************PUBLIC***************/
+	
 	/**
 	 * Whether the controller API is initialized or not. If false, all calls will fail.
 	 */
 	public var active(default, null):Bool = false;
 	
-	private function new(CustomTrace:String->Void)
-	{
-		#if sys		//TODO: figure out what targets this will & won't work with and upate this guard
-		
-		if (active) return;
-		
-		customTrace = CustomTrace;
-		
-		try
-		{
-			//Old-school CFFI calls:
-			SteamWrap_GetConnectedControllers = cpp.Lib.load("steamwrap", "SteamWrap_GetConnectedControllers", 0);
-			SteamWrap_GetDigitalActionOrigins = cpp.Lib.load("steamwrap", "SteamWrap_GetDigitalActionOrigins", 3);
-			SteamWrap_GetAnalogActionOrigins = cpp.Lib.load("steamwrap", "SteamWrap_GetAnalogActionOrigins", 3);
-			SteamWrap_InitControllers = cpp.Lib.load("steamwrap", "SteamWrap_InitControllers", 0);
-			SteamWrap_ShutdownControllers = cpp.Lib.load("steamwrap", "SteamWrap_ShutdownControllers", 0);
-		}
-		catch (e:Dynamic)
-		{
-			customTrace("Running non-Steam version (" + e + ")");
-			return;
-		}
-		
-		// if we get this far, the dlls loaded ok and we need Steam controllers to init.
-		// otherwise, we're trying to run the Steam version without the Steam client
-		active = SteamWrap_InitControllers();
-		
-		#end
-	}
-	
-	/*************PUBLIC***************/
-
 	/**
 	 * Reconfigure the controller to use the specified action set (ie 'Menu', 'Walk' or 'Drive')
 	 * This is cheap, and can be safely called repeatedly. It's often easier to repeatedly call it in
@@ -87,8 +64,7 @@ class ControllerAPI
 	 * @return	data structure containing analog x,y values & other data
 	 */
 	public function getAnalogActionData(controller:Int, action:Int, ?data:ControllerAnalogActionData):ControllerAnalogActionData {
-		if (data == null)
-		{
+		if (data == null) {
 			data = new ControllerAnalogActionData();
 		}
 		
@@ -223,13 +199,13 @@ class ControllerAPI
 	/**
 	 * Must be called when ending use of this API
 	 */
-	public function shutdown()
-	{
+	public function shutdown() {
 		SteamWrap_ShutdownControllers();
 		active = false;
 	}
 	
-	//PRIVATE:
+	
+	/*************PRIVATE***************/
 	
 	private var customTrace:String->Void;
 	
@@ -250,7 +226,34 @@ class ControllerAPI
 		private var SteamWrap_GetAnalogActionData_eMode = Loader.load("SteamWrap_GetAnalogActionData_eMode", "ii");
 		private var SteamWrap_GetAnalogActionData_x     = Loader.load("SteamWrap_GetAnalogActionData_x", "if");
 		private var SteamWrap_GetAnalogActionData_y     = Loader.load("SteamWrap_GetAnalogActionData_y", "if");
-	private var SteamWrap_GetDigitalActionHandle  = Loader.load("SteamWrap_GetDigitalActionHandle","ci");
+	private var SteamWrap_GetDigitalActionHandle  = Loader.load("SteamWrap_GetDigitalActionHandle", "ci");
+	
+	private function new(CustomTrace:String->Void) {
+		#if sys		//TODO: figure out what targets this will & won't work with and upate this guard
+		
+		if (active) return;
+		
+		customTrace = CustomTrace;
+		
+		try {
+			//Old-school CFFI calls:
+			SteamWrap_GetConnectedControllers = cpp.Lib.load("steamwrap", "SteamWrap_GetConnectedControllers", 0);
+			SteamWrap_GetDigitalActionOrigins = cpp.Lib.load("steamwrap", "SteamWrap_GetDigitalActionOrigins", 3);
+			SteamWrap_GetAnalogActionOrigins = cpp.Lib.load("steamwrap", "SteamWrap_GetAnalogActionOrigins", 3);
+			SteamWrap_InitControllers = cpp.Lib.load("steamwrap", "SteamWrap_InitControllers", 0);
+			SteamWrap_ShutdownControllers = cpp.Lib.load("steamwrap", "SteamWrap_ShutdownControllers", 0);
+		}
+		catch (e:Dynamic) {
+			customTrace("Running non-Steam version (" + e + ")");
+			return;
+		}
+		
+		// if we get this far, the dlls loaded ok and we need Steam controllers to init.
+		// otherwise, we're trying to run the Steam version without the Steam client
+		active = SteamWrap_InitControllers();
+		
+		#end
+	}
 }
 
 abstract ControllerDigitalActionData(Int) from Int to Int{
@@ -260,10 +263,10 @@ abstract ControllerDigitalActionData(Int) from Int to Int{
 	}
 	
 	public var bState(get, never):Bool;
-	private function get_bState():Bool{return this & 0x1 == 0x1;}
+	private function get_bState():Bool { return this & 0x1 == 0x1; }
 	
 	public var bActive(get, never):Bool;
-	private function get_bActive():Bool{return this & 0x10 == 0x10;}
+	private function get_bActive():Bool { return this & 0x10 == 0x10; }
 }
 
 class ControllerAnalogActionData
@@ -325,12 +328,11 @@ class ControllerAnalogActionData
 	public var GRYRO_ROLL = 38;
 	public var COUNT = 39;
 	
-	@:from private static function fromString (s:String):EControllerActionOrigin{
+	@:from private static function fromString (s:String):EControllerActionOrigin {
 		
 		var i = Std.parseInt(s);
 		
 		if (i == null) {
-			
 			//if it's not a numeric value, try to interpret it from its name
 			s = s.toUpperCase();
 			return fromStringMap.exists(s) ? fromStringMap.get(s) : NONE;
@@ -340,8 +342,7 @@ class ControllerAnalogActionData
 		
 	}
 	
-	@:to public inline function toString():String
-	{
+	@:to public inline function toString():String {
 		return toStringMap.get(cast this);
 	}
 	
