@@ -1,4 +1,4 @@
-package steamwrap;
+package steamwrap.helpers;
 
 import haxe.macro.Context;
 import haxe.macro.Expr;
