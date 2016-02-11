@@ -82,20 +82,26 @@ Or you can set it up manually:
 
 3. Put some files in the build dir (Mac):
 
-	Windows:		
+	Windows:
+	```
 		ndll/Windows/steam_appid.txt
 		STEAMSDK_DIR/redistributable_bin/steam_api.dll -> ndll/Windows
+	```
 
 	Mac:
+	```
 		ndll/Mac64/steam_appid.txt
 		STEAMSDK_DIR/redistributable_bin/steam_api.lib -> ndll/Mac64/
+	```
 
 	Linux:
+	```
 		ndll/Linux/steam_appid.txt
 		STEAMSDK_DIR/redistributable_bin/steam_api.so -> ndll/Linux/
 		
 		ndll/Linux64/steam_appid.txt
 		STEAMSDK_DIR/redistributable_bin/steam_api.so -> ndll/Linux64/
+	```
 
 	**WHAT THIS DOES:**
 	
