@@ -83,9 +83,6 @@ class steamHandleMap
 
 static steamHandleMap mapControllers;
 static ControllerAnalogActionData_t analogActionData;
-//static steamHandleMap mapActionSets;
-//static steamHandleMap mapDigitalActions;
-//static steamHandleMap mapAnalogActions;
 
 struct Event
 {
@@ -766,11 +763,7 @@ value SteamWrap_InitControllers()
 	
 	if (result)
 	{
-		//clear all our maps
 		mapControllers.init();
-		//mapActionSets.init();
-		//mapDigitalActions.init();
-		//mapAnalogActions.init();
 		
 		analogActionData.eMode = k_EControllerSourceMode_None;
 		analogActionData.x = 0.0;
@@ -788,11 +781,7 @@ value SteamWrap_ShutdownControllers()
 	bool result = SteamController()->Shutdown();
 	if (result)
 	{
-		//clear all our maps
 		mapControllers.init();
-		//mapActionSets.init();
-		//mapDigitalActions.init();
-		//mapAnalogActions.init();
 	}
 	return alloc_bool(result);
 }
@@ -832,7 +821,7 @@ int SteamWrap_GetActionSetHandle(const char * actionSetName)
 {
 
 	ControllerActionSetHandle_t handle = SteamController()->GetActionSetHandle(actionSetName);
-	return handle;//mapActionSets.add(handle);
+	return handle;
 }
 DEFINE_PRIME1(SteamWrap_GetActionSetHandle);
 
@@ -840,11 +829,7 @@ DEFINE_PRIME1(SteamWrap_GetActionSetHandle);
 int SteamWrap_GetDigitalActionHandle(const char * actionName)
 {
 
-	ControllerDigitalActionHandle_t handle = SteamController()->GetDigitalActionHandle(actionName);
-	return handle;
-	/*int lookup = mapDigitalActions.add(handle);
-	printf("actionName = %s, handle = %I64x, lookup = %d\n",actionName, handle, lookup);
-	return lookup;*/
+	return SteamController()->GetDigitalActionHandle(actionName);
 }
 DEFINE_PRIME1(SteamWrap_GetDigitalActionHandle);
 
@@ -853,7 +838,7 @@ int SteamWrap_GetAnalogActionHandle(const char * actionName)
 {
 
 	ControllerAnalogActionHandle_t handle = SteamController()->GetAnalogActionHandle(actionName);
-	return handle;//mapAnalogActions.add(handle);
+	return handle;
 }
 DEFINE_PRIME1(SteamWrap_GetAnalogActionHandle);
 
@@ -862,7 +847,7 @@ int SteamWrap_GetDigitalActionData(int controllerHandle, int actionHandle)
 {
 	
 	ControllerHandle_t c_handle              = mapControllers.get(controllerHandle);
-	ControllerDigitalActionHandle_t a_handle = actionHandle;//mapDigitalActions.get(actionHandle);
+	ControllerDigitalActionHandle_t a_handle = actionHandle;
 	
 	ControllerDigitalActionData_t data = SteamController()->GetDigitalActionData(c_handle, a_handle);
 	
@@ -889,8 +874,8 @@ DEFINE_PRIME2(SteamWrap_GetDigitalActionData);
 
 int SteamWrap_GetAnalogActionData(int controllerHandle, int actionHandle)
 {
-	ControllerHandle_t c_handle              = mapControllers.get(controllerHandle);
-	ControllerAnalogActionHandle_t a_handle = actionHandle;//mapDigitalActions.get(actionHandle);
+	ControllerHandle_t c_handle = mapControllers.get(controllerHandle);
+	ControllerAnalogActionHandle_t a_handle = actionHandle;
 	
 	analogActionData = SteamController()->GetAnalogActionData(c_handle, a_handle);
 	
@@ -920,8 +905,8 @@ DEFINE_PRIME1(SteamWrap_GetAnalogActionData_y);
 value SteamWrap_GetDigitalActionOrigins(value controllerHandle, value actionSetHandle, value digitalActionHandle)
 {
 	ControllerHandle_t c_handle              = mapControllers.get(val_int(controllerHandle));
-	ControllerActionSetHandle_t s_handle     = val_int(actionSetHandle);//mapActionSets.get(val_int(actionSetHandle));
-	ControllerDigitalActionHandle_t a_handle = val_int(digitalActionHandle);//mapDigitalActions.get(val_int(digitalActionHandle));
+	ControllerActionSetHandle_t s_handle     = val_int(actionSetHandle);
+	ControllerDigitalActionHandle_t a_handle = val_int(digitalActionHandle);
 	
 	EControllerActionOrigin origins[STEAM_CONTROLLER_MAX_ORIGINS];
 	
@@ -951,8 +936,8 @@ DEFINE_PRIM(SteamWrap_GetDigitalActionOrigins,3);
 value SteamWrap_GetAnalogActionOrigins(value controllerHandle, value actionSetHandle, value analogActionHandle)
 {
 	ControllerHandle_t c_handle              = mapControllers.get(val_int(controllerHandle));
-	ControllerActionSetHandle_t s_handle     = val_int(actionSetHandle);//mapActionSets.get(val_int(actionSetHandle));
-	ControllerAnalogActionHandle_t a_handle  = val_int(analogActionHandle);//mapDigitalActions.get(val_int(digitalActionHandle));
+	ControllerActionSetHandle_t s_handle     = val_int(actionSetHandle);
+	ControllerAnalogActionHandle_t a_handle  = val_int(analogActionHandle);
 	
 	EControllerActionOrigin origins[STEAM_CONTROLLER_MAX_ORIGINS];
 	
@@ -983,7 +968,7 @@ int SteamWrap_ActivateActionSet(int controllerHandle, int actionSetHandle)
 {
 	
 	ControllerHandle_t c_handle          = mapControllers.get(controllerHandle);
-	ControllerActionSetHandle_t a_handle = actionSetHandle;//mapActionSets.get(actionSetHandle);
+	ControllerActionSetHandle_t a_handle = actionSetHandle;
 	
 	SteamController()->ActivateActionSet(c_handle, a_handle);
 	
