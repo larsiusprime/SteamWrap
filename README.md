@@ -32,7 +32,7 @@ Simple Haxe native extension Steam API wrapper. This code originally shipped in 
     <set name="APP_FILE" value="??????" />
  ```
  
-3. If you are doing non-Steam builds as well, it is practical to wrap this in a conditional. Run your builds as: `openfl test <platform> -Dsteam` to enable it, for example: `openfl test windows -Dsteam`.
+3. If you are doing non-Steam builds as well, it is practical to wrap this in a conditional. Run your builds as: `openfl test <platform> -D steam` to enable it, for example: `openfl test windows -D steam`.
  ```
 	<section if="steam">
 		<!-- Steam specifics go here -->
@@ -44,9 +44,9 @@ Simple Haxe native extension Steam API wrapper. This code originally shipped in 
 	**This extension will automatically create a steam_appid.txt in your binary folder.**
 	**Do not ship your game with this file. Make sure it's stripped during the publishing stage.**
 	
-	**Compiling with the "-Dfinal" flag should suppress creation of the steam_appid.txt**
+	**Compiling with the "-D final" flag should suppress creation of the steam_appid.txt**
 	
-	```openfl test windows -Dsteam -Dfinal``` (for instance)
+	```openfl test windows -D steam -D final``` (for instance)
 	
 	**!!!!!!!!!!!!!!!!! IMPORTANT !!!!!!!!!!!!!!!!!!!**
 
