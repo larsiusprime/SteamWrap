@@ -10,13 +10,14 @@ Simple Haxe native extension Steam API wrapper. This code originally shipped in 
 - Stats (not well-tested)
 
 ~~This repository comes with prebuilt binaries, which means it should work "out of the box".~~
+
 (I'm in the process of updating the binaries, right now all it has is Windows)
 
 #### To include steamwrap.ndll in your OpenFL or NME project:
 
 1. Install the library:
 
-latest git version:
+    latest git version:
 ```haxelib git steamwrap https://github.com/larsiusprime/SteamWrap```
     
 2. Add the following nodes to your project.xml (assumes OpenFL or NME for now):
@@ -43,7 +44,7 @@ latest git version:
 	**This extension will automatically create a steam_appid.txt in your binary folder.**
 	**Do not ship your game with this file. Make sure it's stripped during the publishing stage.**
 	
-	**Compiling with the "-Dfinal" flag should suppress creation of the steam_appid.text**
+	**Compiling with the "-Dfinal" flag should suppress creation of the steam_appid.txt**
 	
 	```openfl test windows -Dsteam -Dfinal``` (for instance)
 	
@@ -81,20 +82,26 @@ Or you can set it up manually:
 
 3. Put some files in the build dir (Mac):
 
-	Windows:		
+	Windows:
+	```
 		ndll/Windows/steam_appid.txt
 		STEAMSDK_DIR/redistributable_bin/steam_api.dll -> ndll/Windows
+	```
 
 	Mac:
+	```
 		ndll/Mac64/steam_appid.txt
 		STEAMSDK_DIR/redistributable_bin/steam_api.lib -> ndll/Mac64/
+	```
 
 	Linux:
+	```
 		ndll/Linux/steam_appid.txt
 		STEAMSDK_DIR/redistributable_bin/steam_api.so -> ndll/Linux/
 		
 		ndll/Linux64/steam_appid.txt
 		STEAMSDK_DIR/redistributable_bin/steam_api.so -> ndll/Linux64/
+	```
 
 	**WHAT THIS DOES:**
 	
@@ -109,22 +116,18 @@ Or you can set it up manually:
 	  
 ------------
 
-There are two more things:
+**Final Steps:**
 
-1.  	Run the "build" script (it's a basic haxelib command shortcut). 
+1. Run the "build" script (it's a basic haxelib command shortcut). 
 	steamwrap.ndll will be output to ndll/[PLATFORM]
 
-	That's great, but we want to make sure it works! Let's run something with it.
+	That's great, but we want to make sure it works! Let's run something with it. If you run the Test program now, you'll notice it exits immediately, asking you to supply an app ID.
 
-2. 	Edit steamwrap/example/Test.hx to include your Steam App ID and achievement ID's, etc.
+2. Edit steamwrap/example/Test.hx to include your Steam App ID and achievement ID's, etc.
 
-	Now you are ready to compile example/Test.hx.
+	Now you are ready to compile example/Test.hx. Run the build script again.
 
-	Open the build script ("build.bat" on windows, otherwise just "build"), and look at the comments at the bottom.
-	Uncomment the bottom section as directed.
-	Now when you run the build script, the ndll AND the test program will be created. Look for your "Test" binary in 		ndll/<Platform>, ie, ndll/Windows.
-
-3.	Start the Steam client, leave it open in the background, and run the Test app to make sure it connects.
+3. Start the Steam client, leave it open in the background, and run the Test app to make sure it connects.
 
 	
 
