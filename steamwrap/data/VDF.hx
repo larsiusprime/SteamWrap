@@ -1,4 +1,4 @@
-package steamwrap.helpers;
+package steamwrap.data;
 import haxe.Json;
 
 /*
@@ -36,17 +36,17 @@ typedef ObjNum = { obj:Dynamic, num:Int };
 
 class VDF
 {
-	public static inline var STRING = '"';
-	public static inline var NODE_OPEN = '{';
-	public static inline var NODE_CLOSE = '}';
-	public static inline var BR_OPEN =  '[';
-	public static inline var BR_CLOSE =  ']';
-	public static inline var COMMENT = '/';
-	public static inline var CR = '\r';
-	public static inline var LF = '\n';
-	public static inline var SPACE =  ' ';
-	public static inline var TAB =  '\t';
-	public static var WHITESPACE(default, null) = [' ', "\t", "\r", "\n"];
+	private static inline var STRING = '"';
+	private static inline var NODE_OPEN = '{';
+	private static inline var NODE_CLOSE = '}';
+	private static inline var BR_OPEN =  '[';
+	private static inline var BR_CLOSE =  ']';
+	private static inline var COMMENT = '/';
+	private static inline var CR = '\r';
+	private static inline var LF = '\n';
+	private static inline var SPACE =  ' ';
+	private static inline var TAB =  '\t';
+	private static var WHITESPACE(default, null) = [' ', "\t", "\r", "\n"];
 	
 	public static function parse(string:String):Dynamic
 	{

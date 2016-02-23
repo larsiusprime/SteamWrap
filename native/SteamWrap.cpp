@@ -55,7 +55,19 @@ class steamHandleMap
 		
 		bool exists(uint64 val)
 		{
-			return (values.find(val) != values.end());
+			return find(val) >= 0;
+		}
+		
+		int find(uint64 val)
+		{
+			for(int i = 0; i <= maxKey; i++)
+			{
+				if(values[i] == val)
+				{
+					return i;
+				}
+			}
+			return -1;
 		}
 		
 		uint64 get(int index)
@@ -66,17 +78,18 @@ class steamHandleMap
 		//add a unique uint64 value to this data structure & return what index it was stored at
 		int add(uint64 val)
 		{
-			it = values.find(val);
+			int i = find(val);
 			
 			//if it already exists just return where it is stored
-			if(it != values.end())
+			if(i >= 0)
 			{
-				return it->first;
+				return i;
 			}
 			
 			//if it is unique increase our maxKey count and return that
 			maxKey++;
 			values[maxKey] = val;
+			
 			return maxKey;
 		}
 };
@@ -801,9 +814,19 @@ value SteamWrap_GetConnectedControllers()
 	
 	for(int i = 0; i < result; i++)
 	{
+		int index = -1;
+		
 		if(false == mapControllers.exists(handles[i]))
 		{
-			int index = mapControllers.add(handles[i]);
+			index = mapControllers.add(handles[i]);
+		}
+		else
+		{
+			index = mapControllers.get(handles[i]);
+		}
+		
+		if(index != -1)
+		{
 			returnData << index;
 			if(i != result-1)
 			{
@@ -845,8 +868,7 @@ DEFINE_PRIME1(SteamWrap_GetAnalogActionHandle);
 //-----------------------------------------------------------------------------------------------------------
 int SteamWrap_GetDigitalActionData(int controllerHandle, int actionHandle)
 {
-	
-	ControllerHandle_t c_handle              = mapControllers.get(controllerHandle);
+	ControllerHandle_t c_handle = controllerHandle != -1 ? mapControllers.get(controllerHandle) : STEAM_CONTROLLER_HANDLE_ALL_CONTROLLERS;
 	ControllerDigitalActionHandle_t a_handle = actionHandle;
 	
 	ControllerDigitalActionData_t data = SteamController()->GetDigitalActionData(c_handle, a_handle);
@@ -874,7 +896,7 @@ DEFINE_PRIME2(SteamWrap_GetDigitalActionData);
 
 int SteamWrap_GetAnalogActionData(int controllerHandle, int actionHandle)
 {
-	ControllerHandle_t c_handle = mapControllers.get(controllerHandle);
+	ControllerHandle_t c_handle = controllerHandle != -1 ? mapControllers.get(controllerHandle) : STEAM_CONTROLLER_HANDLE_ALL_CONTROLLERS;
 	ControllerAnalogActionHandle_t a_handle = actionHandle;
 	
 	analogActionData = SteamController()->GetAnalogActionData(c_handle, a_handle);
@@ -966,8 +988,7 @@ DEFINE_PRIM(SteamWrap_GetAnalogActionOrigins,3);
 //-----------------------------------------------------------------------------------------------------------
 int SteamWrap_ActivateActionSet(int controllerHandle, int actionSetHandle)
 {
-	
-	ControllerHandle_t c_handle          = mapControllers.get(controllerHandle);
+	ControllerHandle_t c_handle = controllerHandle != -1 ? mapControllers.get(controllerHandle) : STEAM_CONTROLLER_HANDLE_ALL_CONTROLLERS;
 	ControllerActionSetHandle_t a_handle = actionSetHandle;
 	
 	SteamController()->ActivateActionSet(c_handle, a_handle);
@@ -979,8 +1000,7 @@ DEFINE_PRIME2(SteamWrap_ActivateActionSet);
 //-----------------------------------------------------------------------------------------------------------
 int SteamWrap_GetCurrentActionSet(int controllerHandle)
 {
-	ControllerHandle_t c_handle = mapControllers.get(controllerHandle);
-	
+	ControllerHandle_t c_handle = controllerHandle != -1 ? mapControllers.get(controllerHandle) : STEAM_CONTROLLER_HANDLE_ALL_CONTROLLERS;
 	ControllerActionSetHandle_t a_handle = SteamController()->GetCurrentActionSet(c_handle);
 	
 	return a_handle;
@@ -988,7 +1008,48 @@ int SteamWrap_GetCurrentActionSet(int controllerHandle)
 DEFINE_PRIME1(SteamWrap_GetCurrentActionSet);
 
 
+//---getters for constants----------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_GetControllerMaxCount()
+{
+	return alloc_int(STEAM_CONTROLLER_MAX_COUNT);
+}
+DEFINE_PRIM(SteamWrap_GetControllerMaxCount,0);
 
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_GetControllerMaxAnalogActions()
+{
+	return alloc_int(STEAM_CONTROLLER_MAX_ANALOG_ACTIONS);
+}
+DEFINE_PRIM(SteamWrap_GetControllerMaxAnalogActions,0);
+
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_GetControllerMaxDigitalActions()
+{
+	return alloc_int(STEAM_CONTROLLER_MAX_DIGITAL_ACTIONS);
+}
+DEFINE_PRIM(SteamWrap_GetControllerMaxDigitalActions,0);
+
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_GetControllerMaxOrigins()
+{
+	return alloc_int(STEAM_CONTROLLER_MAX_ORIGINS);
+}
+DEFINE_PRIM(SteamWrap_GetControllerMaxOrigins,0);
+
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_GetControllerMinAnalogActionData()
+{
+	return alloc_float(STEAM_CONTROLLER_MIN_ANALOG_ACTION_DATA);
+}
+DEFINE_PRIM(SteamWrap_GetControllerMinAnalogActionData,0);
+
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_GetControllerMaxAnalogActionData()
+{
+	return alloc_float(STEAM_CONTROLLER_MAX_ANALOG_ACTION_DATA);
+}
+DEFINE_PRIM(SteamWrap_GetControllerMaxAnalogActionData,0);
 
 //-----------------------------------------------------------------------------------------------------------
 

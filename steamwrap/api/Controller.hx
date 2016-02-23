@@ -1,4 +1,4 @@
-package steamwrap;
+package steamwrap.api;
 import cpp.Lib;
 import steamwrap.helpers.Loader;
 import steamwrap.helpers.MacroHelper;
@@ -9,9 +9,39 @@ import steamwrap.helpers.MacroHelper;
  * Access it via API.controller static variable
  */
 
-@:allow(steamwrap.API)
-class ControllerAPI
+@:allow(steamwrap.api.Steam)
+class Controller
 {
+	/**
+	 * The maximum number of controllers steam can recognize. Use this for array upper bounds.
+	 */
+	public var MAX_CONTROLLERS(get, null):Int;
+	
+	/**
+	 * The maximum number of analog actions steam can recognize. Use this for array upper bounds.
+	 */
+	public var MAX_ANALOG_ACTIONS(get, null):Int;
+	
+	/**
+	 * The maximum number of digital actions steam can recognize. Use this for array upper bounds.
+	 */
+	public var MAX_DIGITAL_ACTIONS(get, null):Int;
+	
+	/**
+	 * The maximum number of origins steam can assign to one action. Use this for array upper bounds.
+	 */
+	public var MAX_ORIGINS(get, null):Int;
+	
+	/**
+	 * The maximum value steam will report for an analog action.
+	 */
+	public var MAX_ANALOG_VALUE(get, null):Float;
+	
+	/**
+	 * The minimum value steam will report for an analog action.
+	 */
+	public var MIN_ANALOG_VALUE(get, null):Float;
+	
 	/*************PUBLIC***************/
 	
 	/**
@@ -215,6 +245,14 @@ class ControllerAPI
 	private var SteamWrap_GetConnectedControllers:Dynamic;
 	private var SteamWrap_GetDigitalActionOrigins:Dynamic;
 	private var SteamWrap_GetAnalogActionOrigins:Dynamic;
+
+	
+	private static var SteamWrap_GetControllerMaxCount:Dynamic;
+	private static var SteamWrap_GetControllerMaxAnalogActions:Dynamic;
+	private static var SteamWrap_GetControllerMaxDigitalActions:Dynamic;
+	private static var SteamWrap_GetControllerMaxOrigins:Dynamic;
+	private static var SteamWrap_GetControllerMaxAnalogActionData:Dynamic;
+	private static var SteamWrap_GetControllerMinAnalogActionData:Dynamic;
 	
 	//CFFI PRIME calls
 	private var SteamWrap_ActivateActionSet       = Loader.load("SteamWrap_ActivateActionSet","iii");
@@ -242,6 +280,13 @@ class ControllerAPI
 			SteamWrap_GetAnalogActionOrigins = cpp.Lib.load("steamwrap", "SteamWrap_GetAnalogActionOrigins", 3);
 			SteamWrap_InitControllers = cpp.Lib.load("steamwrap", "SteamWrap_InitControllers", 0);
 			SteamWrap_ShutdownControllers = cpp.Lib.load("steamwrap", "SteamWrap_ShutdownControllers", 0);
+			
+			SteamWrap_GetControllerMaxCount = cpp.Lib.load("steamwrap", "SteamWrap_GetControllerMaxCount", 0);
+			SteamWrap_GetControllerMaxAnalogActions = cpp.Lib.load("steamwrap", "SteamWrap_GetControllerMaxAnalogActions", 0);
+			SteamWrap_GetControllerMaxDigitalActions = cpp.Lib.load("steamwrap", "SteamWrap_GetControllerMaxDigitalActions", 0);
+			SteamWrap_GetControllerMaxOrigins = cpp.Lib.load("steamwrap", "SteamWrap_GetControllerMaxOrigins", 0);
+			SteamWrap_GetControllerMaxAnalogActionData = cpp.Lib.load("steamwrap", "SteamWrap_GetControllerMaxAnalogActionData", 0);
+			SteamWrap_GetControllerMinAnalogActionData = cpp.Lib.load("steamwrap", "SteamWrap_GetControllerMinAnalogActionData", 0);
 		}
 		catch (e:Dynamic) {
 			customTrace("Running non-Steam version (" + e + ")");
@@ -253,6 +298,54 @@ class ControllerAPI
 		active = SteamWrap_InitControllers();
 		
 		#end
+	}
+	
+	private var max_controllers:Int = -1;
+	private function get_MAX_CONTROLLERS():Int
+	{
+		if(max_controllers == -1)
+			max_controllers = SteamWrap_GetControllerMaxCount();
+		return max_controllers;
+	}
+	
+	private var max_analog_actions = -1;
+	private function get_MAX_ANALOG_ACTIONS():Int
+	{
+		if(max_analog_actions == -1)
+			max_analog_actions = SteamWrap_GetControllerMaxAnalogActions();
+		return max_analog_actions;
+	}
+	
+	private var max_digital_actions = -1;
+	private function get_MAX_DIGITAL_ACTIONS():Int
+	{
+		if (max_digital_actions == -1)
+			max_digital_actions = SteamWrap_GetControllerMaxDigitalActions();
+		return max_digital_actions;
+	}
+	
+	private var max_origins = -1;
+	private function get_MAX_ORIGINS():Int
+	{
+		if(max_origins == -1)
+			max_origins = SteamWrap_GetControllerMaxOrigins();
+		return max_origins;
+	}
+	
+	private var max_analog_value = -1;
+	private function get_MAX_ANALOG_VALUE():Float
+	{
+		if(max_analog_value == -1)
+			max_analog_value = SteamWrap_GetControllerMaxAnalogActionData();
+		return max_analog_value;
+	}
+	
+	private var min_analog_value = -1;
+	private function get_MIN_ANALOG_VALUE():Float
+	{
+		if(min_analog_value == -1)
+			min_analog_value = SteamWrap_GetControllerMinAnalogActionData();
+		return min_analog_value;
 	}
 }
 
@@ -282,10 +375,10 @@ class ControllerAnalogActionData
 @:enum abstract EControllerActionOrigin(Int) {
 	
 	public static var fromStringMap(default, null):Map<String, EControllerActionOrigin>
-		= MacroHelper.buildMap("steamwrap.EControllerActionOrigin");
+		= MacroHelper.buildMap("steamwrap.api.EControllerActionOrigin");
 	
 	public static var toStringMap(default, null):Map<EControllerActionOrigin, String>
-		= MacroHelper.buildMap("steamwrap.EControllerActionOrigin", true);
+		= MacroHelper.buildMap("steamwrap.api.EControllerActionOrigin", true);
 		
 	public var NONE = 0;
 	public var A = 1;

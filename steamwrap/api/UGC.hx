@@ -1,5 +1,6 @@
-package steamwrap;
+package steamwrap.api;
 import cpp.Lib;
+import steamwrap.api.Steam;
 import steamwrap.helpers.Loader;
 import steamwrap.helpers.MacroHelper;
 
@@ -9,8 +10,8 @@ import steamwrap.helpers.MacroHelper;
  * Access it via API.ugcstatic variable
  */
 
-@:allow(steamwrap.API)
-class UGCAPI
+@:allow(steamwrap.api.Steam)
+class UGC
 {
 	/*************PUBLIC***************/
 	

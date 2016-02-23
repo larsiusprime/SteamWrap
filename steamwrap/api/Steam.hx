@@ -1,4 +1,4 @@
-package steamwrap;
+package steamwrap.api;
 import cpp.Lib;
 import haxe.Int64;
 import steamwrap.helpers.Loader;
@@ -15,7 +15,7 @@ typedef ControllerActionSetHandle = Int;
 typedef ControllerDigitalActionHandle = Int;
 typedef ControllerAnalogActionHandle = Int;
 
-class API
+class Steam
 {
 	/*************PUBLIC***************/
 	
@@ -32,12 +32,12 @@ class API
 	/**
 	 * The Steam Controller API
 	 */
-	public static var controllers(default, null):ControllerAPI;
+	public static var controllers(default, null):Controller;
 	
 	/**
 	 * The Steam UGC API
 	 */
-	public static var ugc(default, null):UGCAPI;
+	public static var ugc(default, null):UGC;
 	
 	//User-settable callbacks:
 	
@@ -96,8 +96,8 @@ class API
 			SteamWrap_RequestGlobalStats();
 			
 			//initialize other API's:
-			ugc = new UGCAPI(appId, customTrace);
-			controllers = new ControllerAPI(customTrace);
+			ugc = new UGC(appId, customTrace);
+			controllers = new Controller(customTrace);
 		}
 		else {
 			customTrace("Steam failed to activate");
@@ -312,7 +312,6 @@ class API
 	private static var SteamWrap_IsSteamRunning:Dynamic;
 	private static var SteamWrap_GetCurrentGameLanguage:Dynamic;
 	private static var SteamWrap_OpenOverlay:Dynamic;
-	
 }
 
 class LeaderboardScore {
