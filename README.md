@@ -13,6 +13,15 @@ Simple Haxe native extension Steam API wrapper. This code originally shipped in 
 
 (I'm in the process of updating the binaries, right now all it has is Windows)
 
+#### Dependencies / Requirements:
+
+- Haxe 3.2 or greater
+- hxcpp 3.2.205 or greater
+- OpenFL 3.6 or greater
+- lime 2.8.3 or greater
+
+Probably works with NME as well but I'm unsure of the requirements there. Ask Hugh.
+
 #### To include steamwrap.ndll in your OpenFL or NME project:
 
 1. Install the library:
