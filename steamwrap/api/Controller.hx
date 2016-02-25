@@ -42,6 +42,8 @@ class Controller
 	 */
 	public var MIN_ANALOG_VALUE(get, null):Float;
 	
+	public static inline var MAX_SINGLE_PULSE_TIME:Int = 65535;
+	
 	/*************PUBLIC***************/
 	
 	/**
@@ -234,6 +236,85 @@ class Controller
 		active = false;
 	}
 	
+	/**
+	 * Trigger a haptic pulse in a slightly friendlier way
+	 * @param	controller	handle received from getConnectedControllers()
+	 * @param	targetPad	which pad you want to pulse
+	 * @param	durationMilliSec	duration of the pulse, in milliseconds (1/1000 sec)
+	 * @param	strength	value between 0 and 1, general intensity of the pulsing
+	 */
+	public function rumble(controller:Int, targetPad:ESteamControllerPad, durationMilliSec:Int, strength:Float) {
+		
+		if (strength <= 0) return;
+		if (strength >  1) strength = 1;
+		
+		var durationMicroSec = durationMilliSec * 1000;
+		var repeat = 1;
+		
+		if (durationMicroSec > MAX_SINGLE_PULSE_TIME)
+		{
+			repeat = Math.ceil(durationMicroSec / MAX_SINGLE_PULSE_TIME);
+			durationMicroSec = MAX_SINGLE_PULSE_TIME;
+		}
+		
+		var onTime  = Std.int(durationMicroSec * strength);
+		var offTime = Std.int(durationMicroSec * (1 - strength));
+		
+		if (offTime <= 0) offTime = 1;
+		
+		if (repeat > 1)
+		{
+			triggerRepeatedHapticPulse(controller, targetPad, onTime, offTime, repeat, 0);
+		}
+		else
+		{
+			triggerHapticPulse(controller, targetPad, onTime);
+		}
+	}
+	
+	/**
+	 * Trigger a single haptic pulse (low-level)
+	 * @param	controller	handle received from getConnectedControllers()
+	 * @param	targetPad	which pad you want to pulse
+	 * @param	durationMicroSec	duration of the pulse, in microseconds (1/1000 ms)
+	 */
+	public function triggerHapticPulse(controller:Int, targetPad:ESteamControllerPad, durationMicroSec:Int) {
+		     if (durationMicroSec < 0) durationMicroSec = 0;
+		else if (durationMicroSec > MAX_SINGLE_PULSE_TIME) durationMicroSec = MAX_SINGLE_PULSE_TIME;
+		
+		switch(targetPad)
+		{
+			case LEFT, RIGHT:
+				SteamWrap_TriggerHapticPulse.call(controller, cast targetPad, durationMicroSec);	
+			case BOTH:
+				triggerHapticPulse(controller,  LEFT, durationMicroSec);
+				triggerHapticPulse(controller, RIGHT, durationMicroSec);
+		}
+	}
+	
+	/**
+	 * Trigger a repeated haptic pulse (low-level)
+	 * @param	controller	handle received from getConnectedControllers()
+	 * @param	targetPad	which pad you want to pulse
+	 * @param	durationMicroSec	duration of the pulse, in microseconds (1/1,000 ms)
+	 * @param	offMicroSec	offset between pulses, in microseconds (1/1,000 ms)
+	 * @param	repeat	number of pulses
+	 * @param	flags	special behavior flags
+	 */
+	public function triggerRepeatedHapticPulse(controller:Int, targetPad:ESteamControllerPad, durationMicroSec:Int, offMicroSec:Int, repeat:Int, flags:Int) {
+		     if (durationMicroSec < 0) durationMicroSec = 0;
+		else if (durationMicroSec > MAX_SINGLE_PULSE_TIME) durationMicroSec = MAX_SINGLE_PULSE_TIME;
+		
+		switch(targetPad)
+		{
+			case LEFT, RIGHT:
+				SteamWrap_TriggerRepeatedHapticPulse.call(controller, cast targetPad, durationMicroSec, offMicroSec, repeat, flags);
+			case BOTH:
+				triggerRepeatedHapticPulse(controller,  LEFT, durationMicroSec, offMicroSec, repeat, flags);
+				triggerRepeatedHapticPulse(controller, RIGHT, durationMicroSec, offMicroSec, repeat, flags);
+		}
+	}
+	
 	
 	/*************PRIVATE***************/
 	
@@ -265,6 +346,8 @@ class Controller
 		private var SteamWrap_GetAnalogActionData_x     = Loader.load("SteamWrap_GetAnalogActionData_x", "if");
 		private var SteamWrap_GetAnalogActionData_y     = Loader.load("SteamWrap_GetAnalogActionData_y", "if");
 	private var SteamWrap_GetDigitalActionHandle  = Loader.load("SteamWrap_GetDigitalActionHandle", "ci");
+	private var SteamWrap_TriggerHapticPulse      = Loader.load("SteamWrap_TriggerHapticPulse", "iiiv");
+	private var SteamWrap_TriggerRepeatedHapticPulse = Loader.load("SteamWrap_TriggerRepeatedHapticPulse", "iiiiiiv");
 	
 	private function new(CustomTrace:String->Void) {
 		#if sys		//TODO: figure out what targets this will & won't work with and upate this guard
@@ -444,6 +527,7 @@ class ControllerAnalogActionData
 @:enum abstract ESteamControllerPad(Int) {
 	public var LEFT = 0;
 	public var RIGHT = 1;
+	public var BOTH = 2;
 }
 
 @:enum abstract EControllerSource(Int) {

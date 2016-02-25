@@ -1007,6 +1007,40 @@ int SteamWrap_GetCurrentActionSet(int controllerHandle)
 }
 DEFINE_PRIME1(SteamWrap_GetCurrentActionSet);
 
+void SteamWrap_TriggerHapticPulse(int controllerHandle, int targetPad, int durationMicroSec)
+{
+	ControllerHandle_t c_handle = controllerHandle != -1 ? mapControllers.get(controllerHandle) : STEAM_CONTROLLER_HANDLE_ALL_CONTROLLERS;
+	ESteamControllerPad eTargetPad;
+	switch(targetPad)
+	{
+		case 0:  eTargetPad = k_ESteamControllerPad_Left;
+		case 1:  eTargetPad = k_ESteamControllerPad_Right;
+		default: eTargetPad = k_ESteamControllerPad_Left;
+	}
+	unsigned short usDurationMicroSec = durationMicroSec;
+	
+	SteamController()->TriggerHapticPulse(c_handle, eTargetPad, usDurationMicroSec);
+}
+DEFINE_PRIME3v(SteamWrap_TriggerHapticPulse);
+
+void SteamWrap_TriggerRepeatedHapticPulse(int controllerHandle, int targetPad, int durationMicroSec, int offMicroSec, int repeat, int flags)
+{
+	ControllerHandle_t c_handle = controllerHandle != -1 ? mapControllers.get(controllerHandle) : STEAM_CONTROLLER_HANDLE_ALL_CONTROLLERS;
+	ESteamControllerPad eTargetPad;
+	switch(targetPad)
+	{
+		case 0:  eTargetPad = k_ESteamControllerPad_Left;
+		case 1:  eTargetPad = k_ESteamControllerPad_Right;
+		default: eTargetPad = k_ESteamControllerPad_Left;
+	}
+	unsigned short usDurationMicroSec = durationMicroSec;
+	unsigned short usOffMicroSec = offMicroSec;
+	unsigned short unRepeat = repeat;
+	unsigned short nFlags = flags;
+	
+	SteamController()->TriggerRepeatedHapticPulse(c_handle, eTargetPad, usDurationMicroSec, usOffMicroSec, unRepeat, nFlags);
+}
+DEFINE_PRIME6v(SteamWrap_TriggerRepeatedHapticPulse);
 
 //---getters for constants----------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------------
