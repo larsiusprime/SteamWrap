@@ -41,7 +41,7 @@ Probably works with NME as well but I'm unsure of the requirements there. Ask Hu
     <set name="APP_FILE" value="??????" />
  ```
  
-3. If you are doing non-Steam builds as well, it is practical to wrap this in a conditional. Run your builds as: `openfl test <platform> -D steam` to enable it, for example: `openfl test windows -D steam`.
+3. If you are doing non-Steam builds as well, it is practical to wrap this in a conditional. Run your builds as: `openfl test <platform> -Dsteam` to enable it, for example: `openfl test windows -Dsteam`.
  ```
 	<section if="steam">
 		<!-- Steam specifics go here -->
@@ -53,9 +53,9 @@ Probably works with NME as well but I'm unsure of the requirements there. Ask Hu
 	**This extension will automatically create a steam_appid.txt in your binary folder.**
 	**Do not ship your game with this file. Make sure it's stripped during the publishing stage.**
 	
-	**Compiling with the "-D final" flag should suppress creation of the steam_appid.txt**
+	**Compiling with the "-Dfinal" flag should suppress creation of the steam_appid.txt**
 	
-	```openfl test windows -D steam -D final``` (for instance)
+	```openfl test windows -Dsteam -Dfinal``` (for instance)
 	
 	**!!!!!!!!!!!!!!!!! IMPORTANT !!!!!!!!!!!!!!!!!!!**
 
