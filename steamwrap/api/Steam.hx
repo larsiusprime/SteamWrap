@@ -10,6 +10,15 @@ private enum LeaderboardOp
 	DOWNLOAD(id:String);
 }
 
+@:enum
+abstract SteamNotificationPosition(Int) to Int 
+{
+	var TopLeft = 0;
+	var TopRight = 1;
+	var BottomRight = 2;
+	var BottomLeft = 3;
+}
+
 typedef ControllerHandle = Int64;
 typedef ControllerActionSetHandle = Int;
 typedef ControllerDigitalActionHandle = Int;
@@ -51,8 +60,9 @@ class Steam
 	
 	/**
 	 * @param appId_	Your Steam APP ID (the numbers on the end of your store page URL - store.steampowered.com/app/XYZ)
+	 * @param notificationPosition	The position of the Steam Overlay Notification box.
 	 */
-	public static function init(appId_:Int) {
+	public static function init(appId_:Int, notificationPosition:SteamNotificationPosition = SteamNotificationPosition.BottomRight) {
 		#if sys //TODO: figure out what targets this will & won't work with and upate this guard
 		if (active) return;
 		
@@ -68,7 +78,7 @@ class Steam
 			SteamWrap_GetGlobalStat = cpp.Lib.load("steamwrap", "SteamWrap_GetGlobalStat", 1);
 			SteamWrap_GetStat = cpp.Lib.load("steamwrap", "SteamWrap_GetStat", 1);
 			SteamWrap_IndicateAchievementProgress = cpp.Lib.load("steamwrap", "SteamWrap_IndicateAchievementProgress", 3);
-			SteamWrap_Init = cpp.Lib.load("steamwrap", "SteamWrap_Init", 1);
+			SteamWrap_Init = cpp.Lib.load("steamwrap", "SteamWrap_Init", 2);
 			SteamWrap_IsSteamRunning = cpp.Lib.load("steamwrap", "SteamWrap_IsSteamRunning", 0);
 			SteamWrap_RequestStats = cpp.Lib.load("steamwrap", "SteamWrap_RequestStats", 0);
 			SteamWrap_RunCallbacks = cpp.Lib.load("steamwrap", "SteamWrap_RunCallbacks", 0);
@@ -88,7 +98,7 @@ class Steam
 		
 		// if we get this far, the dlls loaded ok and we need Steam to init.
 		// otherwise, we're trying to run the Steam version without the Steam client
-		active = SteamWrap_Init(steamWrap_onEvent);
+		active = SteamWrap_Init(steamWrap_onEvent, notificationPosition);
 		
 		if (active) {
 			customTrace("Steam active");
