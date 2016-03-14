@@ -89,7 +89,7 @@ Or you can set it up manually:
 		STEAMSDK_DIR/redistributable_bin/linux32/libsteam_api.so -> native/lib/linux32/
 		STEAMSDK_DIR/redistributable_bin/linux64/libsteam_api.so -> native/lib/linux64/
 
-3. Put some files in the build dir (Mac):
+3. Put some files in the build dir:
 
 	Windows:
 	```
