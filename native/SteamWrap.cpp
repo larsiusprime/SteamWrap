@@ -409,21 +409,21 @@ value SteamWrap_Init(value onEvent, value notificationPosition)
 
 		switch (val_int(notificationPosition))
 		{
-		case 0:
-			SteamUtils()->SetOverlayNotificationPosition(k_EPositionTopLeft);
-			break;
-		case 1:
-			SteamUtils()->SetOverlayNotificationPosition(k_EPositionTopRight);
-			break;
-		case 2:
-			SteamUtils()->SetOverlayNotificationPosition(k_EPositionBottomRight);
-			break;
-		case 3:
-			SteamUtils()->SetOverlayNotificationPosition(k_EPositionBottomLeft);
-			break;
-		default:
-			SteamUtils()->SetOverlayNotificationPosition(k_EPositionBottomRight);
-			break;
+			case 0:
+				SteamUtils()->SetOverlayNotificationPosition(k_EPositionTopLeft);
+				break;
+			case 1:
+				SteamUtils()->SetOverlayNotificationPosition(k_EPositionTopRight);
+				break;
+			case 2:
+				SteamUtils()->SetOverlayNotificationPosition(k_EPositionBottomRight);
+				break;
+			case 3:
+				SteamUtils()->SetOverlayNotificationPosition(k_EPositionBottomLeft);
+				break;
+			default:
+				SteamUtils()->SetOverlayNotificationPosition(k_EPositionBottomRight);
+				break;
 		}
 	}
 	return alloc_bool(result);
