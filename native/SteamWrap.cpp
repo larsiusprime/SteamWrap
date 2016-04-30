@@ -3,6 +3,7 @@
 #include <hx/CFFIPrime.h>
 
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
@@ -116,19 +117,21 @@ static void SendEvent(const Event& e)
     val_call1(g_eventHandler->get(), obj);
 }
 
-static value handleToValStr(uint64 handle)
-{
-	std::ostringstream data;
-	data << handle;
-	return alloc_string(data.str().c_str());
-}
+// This is not used and produces compilation error on Linux.
 
-static uint64 valStrToHandle(value str)
-{
-	ControllerHandle_t c_handle;
-	sscanf(val_string(str), "%I64x", &c_handle);
-	return c_handle;
-}
+// static value handleToValStr(uint64 handle)
+// {
+	// std::ostringstream data;
+	// data << handle;
+	// return alloc_string(data.str().c_str());
+// }
+
+// static uint64 valStrToHandle(value str)
+// {
+	// ControllerHandle_t c_handle;
+	// sscanf(val_string(str), "%I64x", &c_handle);
+	// return c_handle;
+// }
 
 //-----------------------------------------------------------------------------------------------------------
 // CallbackHandler
@@ -676,6 +679,41 @@ value SteamWrap_SetAchievement(value name)
 	return alloc_bool(result);
 }
 DEFINE_PRIM(SteamWrap_SetAchievement, 1);
+
+value SteamWrap_GetAchievement(value name)
+{
+  if (!val_is_string(name) || !CheckInit()) return alloc_bool(false);
+  bool achieved = false;
+  SteamUserStats()->GetAchievement(val_string(name), &achieved);
+  return alloc_bool(achieved);
+}
+DEFINE_PRIM(SteamWrap_GetAchievement, 1);
+
+value SteamWrap_GetAchievementDisplayAttribute(value name, value key)
+{
+  if (!val_is_string(name) || !val_is_string(key) || !CheckInit()) return alloc_string("");
+  
+  const char* result = SteamUserStats()->GetAchievementDisplayAttribute(val_string(name), val_string(key));
+  return alloc_string(result);
+}
+DEFINE_PRIM(SteamWrap_GetAchievementDisplayAttribute, 2);
+
+value SteamWrap_GetNumAchievements()
+{
+  if (!CheckInit()) return alloc_int(0);
+  
+  uint32 count = SteamUserStats()->GetNumAchievements();
+  return alloc_int((int)count);
+}
+DEFINE_PRIM(SteamWrap_GetNumAchievements, 0);
+
+value SteamWrap_GetAchievementName(value index)
+{
+  if (!val_is_int(index) && !CheckInit()) return alloc_string("");
+  const char* name = SteamUserStats()->GetAchievementName(val_int(index));
+  return alloc_string(name);
+}
+DEFINE_PRIM(SteamWrap_GetAchievementName, 1);
 
 //-----------------------------------------------------------------------------------------------------------
 value SteamWrap_ClearAchievement(value name)
