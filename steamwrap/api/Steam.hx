@@ -56,7 +56,6 @@ class Steam
 	public static var whenTrace:String->Void;
 	public static var whenUGCItemIdReceived:String->Void;
 	public static var whenUGCItemUpdateComplete:Bool->String->Void;
-
 	
 	/**
 	 * @param appId_	Your Steam APP ID (the numbers on the end of your store page URL - store.steampowered.com/app/XYZ)
@@ -77,17 +76,21 @@ class Steam
 			SteamWrap_GetCurrentGameLanguage = cpp.Lib.load("steamwrap", "SteamWrap_GetCurrentGameLanguage", 0);
 			SteamWrap_GetGlobalStat = cpp.Lib.load("steamwrap", "SteamWrap_GetGlobalStat", 1);
 			SteamWrap_GetStat = cpp.Lib.load("steamwrap", "SteamWrap_GetStat", 1);
+			SteamWrap_GetStatFloat = cpp.Lib.load("steamwrap", "SteamWrap_GetStatFloat", 1);
+			SteamWrap_GetStatInt = cpp.Lib.load("steamwrap", "SteamWrap_GetStatInt", 1);
 			SteamWrap_IndicateAchievementProgress = cpp.Lib.load("steamwrap", "SteamWrap_IndicateAchievementProgress", 3);
 			SteamWrap_Init = cpp.Lib.load("steamwrap", "SteamWrap_Init", 2);
 			SteamWrap_IsSteamRunning = cpp.Lib.load("steamwrap", "SteamWrap_IsSteamRunning", 0);
 			SteamWrap_RequestStats = cpp.Lib.load("steamwrap", "SteamWrap_RequestStats", 0);
 			SteamWrap_RunCallbacks = cpp.Lib.load("steamwrap", "SteamWrap_RunCallbacks", 0);
 			SteamWrap_SetAchievement = cpp.Lib.load("steamwrap", "SteamWrap_SetAchievement", 1);
-      SteamWrap_GetAchievement = cpp.Lib.load("steamwrap", "SteamWrap_GetAchievement", 1);
-      SteamWrap_GetAchievementDisplayAttribute = cpp.Lib.load("steamwrap", "SteamWrap_GetAchievementDisplayAttribute", 2);
-      SteamWrap_GetNumAchievements = cpp.Lib.load("steamwrap", "SteamWrap_GetNumAchievements", 0);
-      SteamWrap_GetAchievementName = cpp.Lib.load("steamwrap", "SteamWrap_GetAchievementName", 1);
+			SteamWrap_GetAchievement = cpp.Lib.load("steamwrap", "SteamWrap_GetAchievement", 1);
+			SteamWrap_GetAchievementDisplayAttribute = cpp.Lib.load("steamwrap", "SteamWrap_GetAchievementDisplayAttribute", 2);
+			SteamWrap_GetNumAchievements = cpp.Lib.load("steamwrap", "SteamWrap_GetNumAchievements", 0);
+			SteamWrap_GetAchievementName = cpp.Lib.load("steamwrap", "SteamWrap_GetAchievementName", 1);
 			SteamWrap_SetStat = cpp.Lib.load("steamwrap", "SteamWrap_SetStat", 2);
+			SteamWrap_SetStatFloat = cpp.Lib.load("steamwrap", "SteamWrap_SetStatFloat", 2);
+			SteamWrap_SetStatInt = cpp.Lib.load("steamwrap", "SteamWrap_SetStatInt", 2);
 			SteamWrap_Shutdown = cpp.Lib.load("steamwrap", "SteamWrap_Shutdown", 0);
 			SteamWrap_StoreStats = cpp.Lib.load("steamwrap", "SteamWrap_StoreStats", 0);
 			SteamWrap_UploadScore = cpp.Lib.load("steamwrap", "SteamWrap_UploadScore", 3);
@@ -149,11 +152,75 @@ class Steam
 		}
 	}
 	
+	/**
+	 * Returns achievement status.
+	 * @param id Achievement API name.
+	 * @return true, if achievement already achieved, false otherwise.
+	 */
+	public static function getAchievement(id:String):Bool {
+		return active && SteamWrap_GetAchievement(id);
+	}
+	
+	/**
+	 * Returns human-readable achievement description.
+	 * @param id Achievement API name.
+	 * @return UTF-8 string with achievement description.
+	 */
+	public static function getAchievementDescription(id:String):String {
+		if (!active) return null;
+		return SteamWrap_GetAchievementDisplayAttribute(id, "desc");
+	}
+	
+	/**
+	 * Returns human-readable achievement name.
+	 * @param id Achievement API name.
+	 * @return UTF-8 string with achievement name.
+	 */
+	public static function getAchievementName(id:String):String {
+		if (!active) return null;
+		return SteamWrap_GetAchievementDisplayAttribute(id, "name");
+	}
+	
 	public static function getCurrentGameLanguage() {
 		return SteamWrap_GetCurrentGameLanguage();
 	}
 	
-	// Kinda awkwardly returns 0 on errors and uses 0 for checking success
+	/**
+	 * Get a stat from steam as a float
+	 * Kinda awkwardly returns 0 on errors and uses 0 for checking success
+	 * @param	id
+	 * @return
+	 */
+	public static function getStatFloat(id:String):Float {
+		if (!active)
+			return 0;
+		var val = SteamWrap_GetStatFloat(id);
+		report("getStat", [id], val != 0);
+		return val;
+	}
+	
+	/**
+	 * Get a stat from steam as an integer
+	 * Kinda awkwardly returns 0 on errors and uses 0 for checking success
+	 * @param	id
+	 * @return
+	 */
+	public static function getStatInt(id:String):Int {
+		if (!active)
+			return 0;
+		var val = SteamWrap_GetStatInt(id);
+		report("getStat", [id], val != 0);
+		return val;
+	}
+	
+	/**
+	 * DEPRECATED: use getStatInt() instead!
+	 * 
+	 * Get a stat from steam as an integer
+	 * Kinda awkwardly returns 0 on errors and uses 0 for checking success
+	 * @param	id
+	 * @return
+	 */
 	public static function getStat(id:String):Int {
 		if (!active)
 			return 0;
@@ -197,72 +264,65 @@ class Steam
 		return active && report("setAchievement", [id], SteamWrap_SetAchievement(id));
 	}
 	
-  /**
-   * Returns achievement status.
-   * @param id Achievement API name.
-   * @return true, if achievement already achieved, false otherwise.
-   */
-  public static function getAchievement(id:String):Bool
-  {
-    return active && SteamWrap_GetAchievement(id);
-  }
-  
-  /**
-   * Returns human-readable achievement description.
-   * @param id Achievement API name.
-   * @return UTF-8 string with achievement description.
-   */
-  public static function getAchievementDescription(id:String):String
-  {
-    if (!active) return null;
-    return SteamWrap_GetAchievementDisplayAttribute(id, "desc");
-  }
-  
-  /**
-   * Returns human-readable achievement name.
-   * @param id Achievement API name.
-   * @return UTF-8 string with achievement name.
-   */
-  public static function getAchievementName(id:String):String
-  {
-    if (!active) return null;
-    return SteamWrap_GetAchievementDisplayAttribute(id, "name");
-  }
-  
-  /**
-   * Returns achievement "hidden" flag.
-   * @param id Achievement API name.
-   * @return true, if achievement is flagged as hidden, false otherwise.
-   */
-  public static function isAchievementHidden(id:String):Bool
-  {
-    return active && SteamWrap_GetAchievementDisplayAttribute(id, "hidden") == "1";
-  }
-  
-  /**
-   * Returns amount of achievements.
-   * Used for iterating achievements. In general games should not need these functions because they should have a
+	/**
+	 * Returns achievement "hidden" flag.
+	 * @param id Achievement API name.
+	 * @return true, if achievement is flagged as hidden, false otherwise.
+	 */
+	public static function isAchievementHidden(id:String):Bool {
+		return active && SteamWrap_GetAchievementDisplayAttribute(id, "hidden") == "1";
+	}
+	
+	/**
+	 * Returns amount of achievements.
+	 * Used for iterating achievements. In general games should not need these functions because they should have a
 	 * list of existing achievements compiled into them.
-   */
-  public static function getNumAchievements():Int
-  {
-    if (!active) return 0;
-    return SteamWrap_GetNumAchievements();
-  }
-  
-  /**
-   * Returns achievement API name from its index in achievement list.
-   * @param index Achievement index in range [0,getNumAchievements].
-   * @return Achievement API name.
-   */
-  public static function getAchievementAPIName(index:Int):String
-  {
-    if (!active) return null;
-    return SteamWrap_GetAchievementName(index);
-  }
-  
+	 */
+	public static function getNumAchievements():Int {
+		if (!active) return 0;
+		return SteamWrap_GetNumAchievements();
+	}
+	
+	/**
+	 * Returns achievement API name from its index in achievement list.
+	 * @param index Achievement index in range [0,getNumAchievements].
+	 * @return Achievement API name.
+	 */
+	public static function getAchievementAPIName(index:Int):String {
+		if (!active) return null;
+		return SteamWrap_GetAchievementName(index);
+	}
+	
+	/**
+	 * DEPRECATED: use setStatInt() instead!
+	 * 
+	 * Sets a steam stat as an int
+	 * @param	id Stat API name
+	 * @param	val
+	 * @return
+	 */
 	public static function setStat(id:String, val:Int):Bool {
 		return active && report("setStat", [id, Std.string(val)], SteamWrap_SetStat(id, val));
+	}
+	
+	/**
+	 * Sets a steam stat as a float
+	 * @param	id Stat API name
+	 * @param	val
+	 * @return
+	 */
+	public static function setStatFloat(id:String, val:Float):Bool {
+		return active && report("setStatFloat", [id, Std.string(val)], SteamWrap_SetStatFloat(id, val));
+	}
+	
+	/**
+	 * Sets a steam stat as an int
+	 * @param	id Stat API name
+	 * @param	val
+	 * @return
+	 */
+	public static function setStatInt(id:String, val:Int):Bool {
+		return active && report("setStatInt", [id, Std.string(val)], SteamWrap_SetStatInt(id, val));
 	}
 	
 	public static function storeStats():Bool {
@@ -376,12 +436,16 @@ class Steam
 	private static var SteamWrap_RunCallbacks:Dynamic;
 	private static var SteamWrap_RequestStats:Dynamic;
 	private static var SteamWrap_GetStat:Dynamic;
+	private static var SteamWrap_GetStatFloat:Dynamic;
+	private static var SteamWrap_GetStatInt:Dynamic;
 	private static var SteamWrap_SetStat:Dynamic;
+	private static var SteamWrap_SetStatFloat:Dynamic;
+	private static var SteamWrap_SetStatInt:Dynamic;
 	private static var SteamWrap_SetAchievement:Dynamic;
-  private static var SteamWrap_GetAchievement:String->Bool;
-  private static var SteamWrap_GetAchievementDisplayAttribute:String->String->String;
-  private static var SteamWrap_GetNumAchievements:Void->Int;
-  private static var SteamWrap_GetAchievementName:Int->String;
+	private static var SteamWrap_GetAchievement:String->Bool;
+	private static var SteamWrap_GetAchievementDisplayAttribute:String->String->String;
+	private static var SteamWrap_GetNumAchievements:Void->Int;
+	private static var SteamWrap_GetAchievementName:Int->String;
 	private static var SteamWrap_ClearAchievement:Dynamic;
 	private static var SteamWrap_IndicateAchievementProgress:Dynamic;
 	private static var SteamWrap_StoreStats:Dynamic;

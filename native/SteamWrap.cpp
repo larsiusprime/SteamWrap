@@ -475,16 +475,64 @@ value SteamWrap_GetStat(value name)
 DEFINE_PRIM(SteamWrap_GetStat, 1);
 
 //-----------------------------------------------------------------------------------------------------------
+value SteamWrap_GetStatFloat(value name)
+{
+	if (!val_is_string(name)|| !CheckInit())
+		return alloc_float(0.0);
+
+	float val = 0.0;
+	SteamUserStats()->GetStat(val_string(name), &val);
+	return alloc_float(val);
+}
+DEFINE_PRIM(SteamWrap_GetStatFloat, 1);
+
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_GetStatInt(value name)
+{
+	if (!val_is_string(name)|| !CheckInit())
+		return alloc_int(0);
+
+	int val = 0;
+	SteamUserStats()->GetStat(val_string(name), &val);
+	return alloc_int(val);
+}
+DEFINE_PRIM(SteamWrap_GetStatInt, 1);
+
+//-----------------------------------------------------------------------------------------------------------
 value SteamWrap_SetStat(value name, value val)
 {
 	if (!val_is_string(name) || !val_is_int(val) || !CheckInit())
 		return alloc_bool(false);
 
-	bool result = SteamUserStats()->SetStat(val_string(name), val_int(val));
+	bool result = SteamUserStats()->SetStat(val_string(name), (int) val_int(val));
 
 	return alloc_bool(result);
 }
 DEFINE_PRIM(SteamWrap_SetStat, 2);
+
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_SetStatFloat(value name, value val)
+{
+	if (!val_is_string(name) || !val_is_float(val) || !CheckInit())
+		return alloc_bool(false);
+
+	bool result = SteamUserStats()->SetStat(val_string(name), (float) val_float(val));
+
+	return alloc_bool(result);
+}
+DEFINE_PRIM(SteamWrap_SetStatFloat, 2);
+
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_SetStatInt(value name, value val)
+{
+	if (!val_is_string(name) || !val_is_int(val) || !CheckInit())
+		return alloc_bool(false);
+
+	bool result = SteamUserStats()->SetStat(val_string(name), (int) val_int(val));
+
+	return alloc_bool(result);
+}
+DEFINE_PRIM(SteamWrap_SetStatInt, 2);
 
 //-----------------------------------------------------------------------------------------------------------
 value SteamWrap_StoreStats()
