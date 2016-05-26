@@ -67,8 +67,7 @@ See steamwrap/example/Test.hx for a basic example.
 
 **Automatic steps**
 
-1. Run setup.bat and enter the values it asks you for
-   - This only works when run from windows
+1. Run setup.bat (windows) or setup.sh (mac/linux) and enter the values it asks you for
 
 Or you can set it up manually:
 
