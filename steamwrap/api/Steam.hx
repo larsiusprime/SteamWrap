@@ -234,7 +234,13 @@ class Steam
 	}
 	
 	public static function isSteamRunning() {
-		return SteamWrap_IsSteamRunning();
+		try{
+			return SteamWrap_IsSteamRunning();
+		}
+		catch (msg:Dynamic)
+		{
+			trace("error running steam: " + msg);
+		}
 	}
 	
 	public static function onEnterFrame() {

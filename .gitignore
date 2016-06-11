@@ -6,3 +6,4 @@
 /native/*.pdb
 /obj
 /ndll
+temp/
