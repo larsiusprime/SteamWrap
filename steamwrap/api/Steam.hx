@@ -241,6 +241,7 @@ class Steam
 		{
 			trace("error running steam: " + msg);
 		}
+		return false;
 	}
 	
 	public static function onEnterFrame() {

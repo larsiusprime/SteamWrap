@@ -17,7 +17,7 @@
 	</section>
 
 	<section if="mac">
-		<template path="native/lib/osx32/libsteam_api.dylib" rename="bin/${APP_FILE}.app/Contents/MacOS/libsteam_api.dylib" />
+		<template path="native/lib/osx64/libsteam_api.dylib" rename="bin/${APP_FILE}.app/Contents/MacOS/libsteam_api.dylib" />
 		<template path="templates/steam_appid.txt" rename="bin/${APP_FILE}.app/Contents/MacOS/steam_appid.txt" unless="final"/>
 	</section>
 
