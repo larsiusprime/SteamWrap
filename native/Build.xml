@@ -17,6 +17,7 @@
 
 <files id="files">
 	<compilerflag value="-Iinclude"/>
+	<compilerflag value="-D__STDC_LIMIT_MACROS" if="linux"/>
 	<file name="SteamWrap.cpp" />
 </files>
 
