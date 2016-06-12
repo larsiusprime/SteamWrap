@@ -17,13 +17,16 @@
 
 <files id="files">
 	<compilerflag value="-Iinclude"/>
-	<compilerflag value="-D__STDC_LIMIT_MACROS" if="linux"/>
 	<file name="SteamWrap.cpp" />
 </files>
 
 <compiler id="default">
 	<objdir value="../obj/32" if="HXCPP_M32"/>
 	<objdir value="../obj/64" if="HXCPP_M64"/>
+</compiler>
+	
+<compiler id="linux">
+	<flag value="-D__STDC_LIMIT_MACROS"/>
 </compiler>
 
 <target id="NDLL" output="steamwrap" tool="linker" toolid="dll" unless="linux">
