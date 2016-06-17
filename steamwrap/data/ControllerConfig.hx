@@ -70,12 +70,15 @@ class ControllerConfig
 		config.actionSets = [];
 		config.localizations = [];
 		
+		var foundRoot = false;
+		
 		for (field in Reflect.fields(obj))
 		{
 			var s:String = simplestr(field);
 			
 			if (s == "ingameactions")
 			{
+				foundRoot = true;
 				var root = Reflect.field(obj, field);
 				
 				var foundActions = false;
@@ -112,7 +115,10 @@ class ControllerConfig
 			}
 			else
 			{
-				throw ("root field (In Game Actions) not found!");
+				if (!foundRoot)
+				{
+					throw ("root field (In Game Actions) not found!");
+				}
 			}
 		}
 		
