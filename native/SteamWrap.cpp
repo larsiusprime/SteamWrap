@@ -296,7 +296,7 @@ bool CallbackHandler::UploadScore(const std::string& leaderboardId, int score, i
 static std::string toLeaderboardScore(const char* leaderboardName, const char* userName, int score, int detail, int rank)
 {
 	std::ostringstream data;
-	data << leaderboardName << "," << score << "," << detail << "," << rank;
+	data << leaderboardName << "," << userName << "," << score << "," << detail << "," << rank;
 	return data.str();
 }
 

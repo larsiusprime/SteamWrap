@@ -429,16 +429,20 @@ class Steam
 			case "ScoreDownloaded":
 				if (success) {
 					var rawScores = data.split(";");
-					var processedScored:Array<LeaderboardScore> = new Array<LeaderboardScore>();
-					for (score in rawScores) {
-						var score = LeaderboardScore.fromString(data);
-						if (score != null) {
-							processedScored.push(score);
+					var processedScores:Array<LeaderboardScore> = new Array<LeaderboardScore>();
+					
+					for (score in rawScores) 
+					{
+						var processedScore = LeaderboardScore.fromString(score);
+						if (processedScore != null) 
+						{
+							processedScores.push(processedScore);
 						}
 					}
 					
-					if (whenLeaderboardScoreDownloaded != null) {
-						whenLeaderboardScoreDownloaded(processedScored);
+					if (whenLeaderboardScoreDownloaded != null) 
+					{						
+						whenLeaderboardScoreDownloaded(processedScores);
 					}
 				}
 				processNextLeaderboardOp();
@@ -509,7 +513,8 @@ class LeaderboardScore {
 	}
 
 	public static function fromString(str:String):LeaderboardScore {
-		var tokens = str.split(",");
+		var tokens = str.split(","); 
+		
 		if (tokens.length == 5)
 			return new LeaderboardScore(tokens[0], Std.string(tokens[1]), Std.parseInt(tokens[2]), Std.parseInt(tokens[3]), Std.parseInt(tokens[4]));
 		else
