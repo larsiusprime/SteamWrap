@@ -167,11 +167,11 @@ class Controller
 		if (!active) return [];
 		var str:String = SteamWrap_GetConnectedControllers();
 		var arrStr:Array<String> = str.split(",");
-		var intStr = [];
+		var intArr = [];
 		for (astr in arrStr) {
-			intStr.push(Std.parseInt(astr));
+			intArr.push(Std.parseInt(astr));
 		}
-		return intStr;
+		return intArr;
 	}
 	
 	/**
@@ -520,6 +520,52 @@ class ControllerAnalogActionData
 	
 	@:to public inline function toString():String {
 		return toStringMap.get(cast this);
+	}
+	
+	public static function getGlyph(value:EControllerActionOrigin):String {
+		return switch(value)
+		{
+			case NONE:               "none";
+			case A:                  "button_a";
+			case B:                  "button_b";
+			case X:                  "button_x";
+			case Y:                  "button_y";
+			case LEFTBUMPER:         "shoulder_l";
+			case RIGHTBUMPER:        "shoulder_r";
+			case LEFTGRIP:           "grip_l";
+			case RIGHTGRIP:          "grip_r";
+			case START:              "button_start";
+			case BACK:               "button_select";
+			case LEFTPAD_TOUCH:      "pad_l_touch";
+			case LEFTPAD_SWIPE:      "pad_l_swipe";
+			case LEFTPAD_CLICK:      "pad_l_click";
+			case LEFTPAD_DPADNORTH:  "pad_l_dpad_n";
+			case LEFTPAD_DPADSOUTH:  "pad_l_dpad_s";
+			case LEFTPAD_DPADWEST:   "pad_l_dpad_w";
+			case LEFTPAD_DPADEAST:   "pad_l_dpad_e";
+			case RIGHTPAD_TOUCH:     "pad_r_touch";
+			case RIGHTPAD_SWIPE:     "pad_r_swipe";
+			case RIGHTPAD_CLICK:     "pad_r_click";
+			case RIGHTPAD_DPADNORTH: "pad_r_dpad_n";
+			case RIGHTPAD_DPADSOUTH: "pad_r_dpad_s";
+			case RIGHTPAD_DPADWEST:  "pad_r_dpad_w";
+			case RIGHTPAD_DPADEAST:  "pad_r_dpad_e";
+			case LEFTTRIGGER_PULL:   "trigger_l_pull";
+			case LEFTTRIGGER_CLICK:  "trigger_l_click";
+			case RIGHTTRIGGER_PULL:  "trigger_r_pull";
+			case RIGHTTRIGGER_CLICK: "trigger_r_click";
+			case LEFTSTICK_MOVE:     "stick_move";
+			case LEFTSTICK_CLICK:    "stick_click";
+			case LEFTSTICK_DPADNORTH:"stick_dpad_n";
+			case LEFTSTICK_DPADSOUTH:"stick_dpad_s";
+			case LEFTSTICK_DPADWEST: "stick_dpad_w";
+			case LEFTSTICK_DPADEAST: "stick_dpad_e";
+			case GRYRO_MOVE:         "gyro";
+			case GRYRO_PITCH:        "gyro_pitch";
+			case GRYRO_YAW:          "gyro_yaw";
+			case GRYRO_ROLL:         "gyro_roll";
+			default:                 "none";
+		}
 	}
 	
 }
