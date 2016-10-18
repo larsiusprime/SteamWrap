@@ -169,7 +169,9 @@ class Controller
 		var arrStr:Array<String> = str.split(",");
 		var intArr = [];
 		for (astr in arrStr) {
-			intArr.push(Std.parseInt(astr));
+			if (astr != "") {
+				intArr.push(Std.parseInt(astr));
+			}
 		}
 		return intArr;
 	}
