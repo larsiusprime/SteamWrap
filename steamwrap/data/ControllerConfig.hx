@@ -143,8 +143,12 @@ class ControllerConfig
 					var buttonNode = Reflect.field(actionSetNode, field);
 					for (bField in Reflect.fields(buttonNode))
 					{
-						var buttonAction = { name:bField, localizationKey:Reflect.field(buttonNode, bField) };
-						set.button.push(buttonAction);
+						var value = simplestr(Reflect.field(buttonNode, bField));
+						if (false == (bField == "obj" && value == "{}"))
+						{
+							var buttonAction = { name:bField, localizationKey:value };
+							set.button.push(buttonAction);
+						}
 					}
 					
 				}
@@ -153,8 +157,12 @@ class ControllerConfig
 					var analogTriggerNode = Reflect.field(actionSetNode, field);
 					for (aField in Reflect.fields(analogTriggerNode))
 					{
-						var analogAction = { name:aField, localizationKey:Reflect.field(analogTriggerNode, aField) };
-						set.analogTrigger.push(analogAction);
+						var value = simplestr(Reflect.field(analogTriggerNode, aField));
+						if (false == (aField == "obj" && value == "{}"))
+						{
+							var analogAction = { name:aField, localizationKey:value };
+							set.analogTrigger.push(analogAction);
+						}
 					}
 					
 				}
@@ -165,8 +173,10 @@ class ControllerConfig
 					{
 						var stickPadGyroAction = { name:sField, localizationKey:"", inputMode:JoystickMove, osMouse:false };
 						var sNode = Reflect.field(stickPadGyroNode, sField);
+						var noFields = true;
 						for (s2Field in Reflect.fields(sNode)) 
 						{
+							noFields = false;
 							var s2Str:String = simplestr(s2Field);
 							var s2Node = Reflect.field(sNode, s2Field);
 							var s2Val  = Reflect.field(s2Node, s2Field);
@@ -188,7 +198,10 @@ class ControllerConfig
 								stickPadGyroAction.osMouse = (s2Val == "1");
 							}
 						}
-						set.stickPadGyro.push(stickPadGyroAction);
+						if (!noFields)
+						{
+							set.stickPadGyro.push(stickPadGyroAction);
+						}
 					}
 				}
 			}
