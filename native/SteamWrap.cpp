@@ -905,6 +905,24 @@ value SteamWrap_ShutdownControllers()
 DEFINE_PRIM(SteamWrap_ShutdownControllers,0);
 
 //-----------------------------------------------------------------------------------------------------------
+value SteamWrap_ShowBindingPanel(value controllerHandle)
+{
+	if(!val_is_int(controllerHandle)) 
+		return alloc_bool(false);
+	
+	int i_handle = val_int(controllerHandle);
+	
+	printf("ShowBindingPanel(%d)\n",i_handle);
+	ControllerHandle_t c_handle = i_handle != -1 ? mapControllers.get(i_handle) : STEAM_CONTROLLER_HANDLE_ALL_CONTROLLERS;
+	printf("c_handle = %I64d\n",c_handle);
+	
+	bool result = SteamController()->ShowBindingPanel(c_handle);
+	
+	return alloc_bool(result);
+}
+DEFINE_PRIM(SteamWrap_ShowBindingPanel, 1);
+
+//-----------------------------------------------------------------------------------------------------------
 value SteamWrap_GetConnectedControllers()
 {
 	SteamController()->RunFrame();

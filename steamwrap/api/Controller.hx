@@ -221,6 +221,7 @@ class Controller
 			result = Std.parseInt(strArr[0]);
 		}
 		
+		//rest of the values are the actual origins
 		if (strArr.length > 1 && originsOut != null) {
 			for (i in 1...strArr.length) {
 				originsOut[i] = strArr[i];
@@ -229,6 +230,16 @@ class Controller
 		
 		return result;
 	}
+	
+	/**
+	 * Activates the Steam overlay and shows the input configuration (binding) screen
+	 * @return false if overlay is disabled / unavailable, or if the Steam client is not in Big Picture mode
+	 */
+	public function showBindingPanel(controller:Int):Bool {
+		var result:Bool = SteamWrap_ShowBindingPanel(controller);
+		return result;
+	}
+	
 	
 	/**
 	 * Must be called when ending use of this API
@@ -328,7 +339,7 @@ class Controller
 	private var SteamWrap_GetConnectedControllers:Dynamic;
 	private var SteamWrap_GetDigitalActionOrigins:Dynamic;
 	private var SteamWrap_GetAnalogActionOrigins:Dynamic;
-
+	private var SteamWrap_ShowBindingPanel:Dynamic;
 	
 	private static var SteamWrap_GetControllerMaxCount:Dynamic;
 	private static var SteamWrap_GetControllerMaxAnalogActions:Dynamic;
@@ -364,6 +375,7 @@ class Controller
 			SteamWrap_GetDigitalActionOrigins = cpp.Lib.load("steamwrap", "SteamWrap_GetDigitalActionOrigins", 3);
 			SteamWrap_GetAnalogActionOrigins = cpp.Lib.load("steamwrap", "SteamWrap_GetAnalogActionOrigins", 3);
 			SteamWrap_InitControllers = cpp.Lib.load("steamwrap", "SteamWrap_InitControllers", 0);
+			SteamWrap_ShowBindingPanel = cpp.Lib.load("steamwrap", "SteamWrap_ShowBindingPanel", 1);
 			SteamWrap_ShutdownControllers = cpp.Lib.load("steamwrap", "SteamWrap_ShutdownControllers", 0);
 			
 			SteamWrap_GetControllerMaxCount = cpp.Lib.load("steamwrap", "SteamWrap_GetControllerMaxCount", 0);
