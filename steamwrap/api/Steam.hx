@@ -81,6 +81,8 @@ class Steam
 			SteamWrap_IndicateAchievementProgress = cpp.Lib.load("steamwrap", "SteamWrap_IndicateAchievementProgress", 3);
 			SteamWrap_Init = cpp.Lib.load("steamwrap", "SteamWrap_Init", 2);
 			SteamWrap_IsSteamRunning = cpp.Lib.load("steamwrap", "SteamWrap_IsSteamRunning", 0);
+			SteamWrap_IsOverlayEnabled = cpp.Lib.load("steamwrap", "SteamWrap_IsOverlayEnabled", 0);
+			SteamWrap_BOverlayNeedsPresent = cpp.Lib.load("steamwrap", "SteamWrap_BOverlayNeedsPresent", 0);
 			SteamWrap_RequestStats = cpp.Lib.load("steamwrap", "SteamWrap_RequestStats", 0);
 			SteamWrap_RunCallbacks = cpp.Lib.load("steamwrap", "SteamWrap_RunCallbacks", 0);
 			SteamWrap_SetAchievement = cpp.Lib.load("steamwrap", "SteamWrap_SetAchievement", 1);
@@ -231,6 +233,14 @@ class Steam
 	
 	public static function indicateAchievementProgress(id:String, curProgress:Int, maxProgress:Int):Bool {
 		return active && report("indicateAchivevementProgress", [id, Std.string(curProgress), Std.string(maxProgress)], SteamWrap_IndicateAchievementProgress(id, curProgress, maxProgress));
+	}
+	
+	public static function isOverlayEnabled():Bool {
+		return SteamWrap_IsOverlayEnabled();
+	}
+	
+	public static function BOverlayNeedsPresent() {
+		return SteamWrap_BOverlayNeedsPresent();
 	}
 	
 	public static function isSteamRunning() {
@@ -462,6 +472,8 @@ class Steam
 	private static var SteamWrap_RequestGlobalStats:Dynamic;
 	private static var SteamWrap_GetGlobalStat:Dynamic;
 	private static var SteamWrap_RestartAppIfNecessary:Dynamic;
+	private static var SteamWrap_IsOverlayEnabled:Dynamic;
+	private static var SteamWrap_BOverlayNeedsPresent:Dynamic;
 	private static var SteamWrap_IsSteamRunning:Dynamic;
 	private static var SteamWrap_GetCurrentGameLanguage:Dynamic;
 	private static var SteamWrap_OpenOverlay:Dynamic;

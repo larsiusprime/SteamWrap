@@ -1,5 +1,6 @@
 package steamwrap.api;
 import cpp.Lib;
+import haxe.Int32;
 import steamwrap.helpers.Loader;
 import steamwrap.helpers.MacroHelper;
 
@@ -240,6 +241,28 @@ class Controller
 		return result;
 	}
 	
+
+	/**
+	 * Activates the Big Picture text input dialog which only supports gamepad input
+	 * @param	inputMode	NORMAL or PASSWORD
+	 * @param	lineMode	SINGLE_LINE or MULTIPLE_LINES
+	 * @param	description	User-facing description of what's being entered, e.g. "Please enter your name"
+	 * @param	charMax	Maximum number of characters
+	 * @param	existingText	Text to pre-fill the dialog with, if any
+	 * @return
+	 */
+	public function showGamepadTextInput(inputMode:EGamepadTextInputMode, lineMode:EGamepadTextInputLineMode, description:String, charMax:Int = 0xFFFFFF, existingText:String = ""):Bool {
+		return (1 == SteamWrap_ShowGamepadTextInput.call(cast inputMode, cast lineMode, description, charMax, existingText));
+	}
+
+	/**
+	 * Returns the text that the player has entered using showGamepadTextInput()
+	 * @return
+	 */
+	public function getEnteredGamepadTextInput():String {
+		return SteamWrap_GetEnteredGamepadTextInput();
+	}
+	
 	
 	/**
 	 * Must be called when ending use of this API
@@ -338,6 +361,7 @@ class Controller
 	private var SteamWrap_ShutdownControllers:Dynamic;
 	private var SteamWrap_GetConnectedControllers:Dynamic;
 	private var SteamWrap_GetDigitalActionOrigins:Dynamic;
+	private var SteamWrap_GetEnteredGamepadTextInput:Dynamic;
 	private var SteamWrap_GetAnalogActionOrigins:Dynamic;
 	private var SteamWrap_ShowBindingPanel:Dynamic;
 	
@@ -359,6 +383,7 @@ class Controller
 		private var SteamWrap_GetAnalogActionData_x     = Loader.load("SteamWrap_GetAnalogActionData_x", "if");
 		private var SteamWrap_GetAnalogActionData_y     = Loader.load("SteamWrap_GetAnalogActionData_y", "if");
 	private var SteamWrap_GetDigitalActionHandle  = Loader.load("SteamWrap_GetDigitalActionHandle", "ci");
+	private var SteamWrap_ShowGamepadTextInput    = Loader.load("SteamWrap_ShowGamepadTextInput", "iicici");
 	private var SteamWrap_TriggerHapticPulse      = Loader.load("SteamWrap_TriggerHapticPulse", "iiiv");
 	private var SteamWrap_TriggerRepeatedHapticPulse = Loader.load("SteamWrap_TriggerRepeatedHapticPulse", "iiiiiiv");
 	
@@ -373,6 +398,7 @@ class Controller
 			//Old-school CFFI calls:
 			SteamWrap_GetConnectedControllers = cpp.Lib.load("steamwrap", "SteamWrap_GetConnectedControllers", 0);
 			SteamWrap_GetDigitalActionOrigins = cpp.Lib.load("steamwrap", "SteamWrap_GetDigitalActionOrigins", 3);
+			SteamWrap_GetEnteredGamepadTextInput = cpp.Lib.load("steamwrap", "SteamWrap_GetEnteredGamepadTextInput", 0);
 			SteamWrap_GetAnalogActionOrigins = cpp.Lib.load("steamwrap", "SteamWrap_GetAnalogActionOrigins", 3);
 			SteamWrap_InitControllers = cpp.Lib.load("steamwrap", "SteamWrap_InitControllers", 0);
 			SteamWrap_ShowBindingPanel = cpp.Lib.load("steamwrap", "SteamWrap_ShowBindingPanel", 1);
@@ -618,3 +644,14 @@ class ControllerAnalogActionData
 	public var MOUSEJOYSTICK = 11;
 	public var MOUSEREGION = 12;
 }
+
+@:enum abstract EGamepadTextInputLineMode(Int) {
+	public var SINGLE_LINE = 0;
+	public var MULTIPLE_LINES = 1;
+}
+
+@:enum abstract EGamepadTextInputMode(Int) {
+	public var NORMAL = 0;
+	public var PASSWORD = 1;
+}
+

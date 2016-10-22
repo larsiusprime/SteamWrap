@@ -20,6 +20,7 @@ AutoGCRoot *g_eventHandler = 0;
 // Event
 //-----------------------------------------------------------------------------------------------------------
 static const char* kEventTypeNone = "None";
+static const char* kEventTypeOnGamepadTextInputDismissed = "GamepadTextInputDismissed_t";
 static const char* kEventTypeOnUserStatsReceived = "UserStatsReceived";
 static const char* kEventTypeOnUserStatsStored = "UserStatsStored";
 static const char* kEventTypeOnUserAchievementStored = "UserAchievementStored";
@@ -146,12 +147,14 @@ public:
 	CallbackHandler() :
  		m_CallbackUserStatsReceived( this, &CallbackHandler::OnUserStatsReceived ),
  		m_CallbackUserStatsStored( this, &CallbackHandler::OnUserStatsStored ),
- 		m_CallbackAchievementStored( this, &CallbackHandler::OnAchievementStored )
+ 		m_CallbackAchievementStored( this, &CallbackHandler::OnAchievementStored ),
+		m_CallbackGamepadTextInputDismissed( this, &CallbackHandler:OnGamepadTextInputDismissed )
 	{}
 
 	STEAM_CALLBACK( CallbackHandler, OnUserStatsReceived, UserStatsReceived_t, m_CallbackUserStatsReceived );
 	STEAM_CALLBACK( CallbackHandler, OnUserStatsStored, UserStatsStored_t, m_CallbackUserStatsStored );
 	STEAM_CALLBACK( CallbackHandler, OnAchievementStored, UserAchievementStored_t, m_CallbackAchievementStored );
+	STEAM_CALLBACK( CallbackHandler, OnGamepadTextInputDismissed, GamepadTextInputDismissed_t, m_CallbackGamepadTextInputDismissed );
 
 	void FindLeaderboard(const char* name);
 	void OnLeaderboardFound( LeaderboardFindResult_t *pResult, bool bIOFailure);
@@ -177,6 +180,11 @@ public:
 	void OnItemUpdateSubmitted( SubmitItemUpdateResult_t *pResult, bool bIOFailure);
 	CCallResult<CallbackHandler, SubmitItemUpdateResult_t> m_callResultSubmitUGCItemUpdate;
 };
+
+void CallbackHandler::OnGamepadTextInputDismissed( GamepadTextInputDismissed_t *pCallback )
+{
+	SendEvent(Event(kEventTypeOnGamepadTextInputDismissed, pCallback->m_bSubmitted));
+}
 
 void CallbackHandler::OnUserStatsReceived( UserStatsReceived_t *pCallback )
 {
@@ -858,6 +866,22 @@ value SteamWrap_RestartAppIfNecessary(value appId)
 DEFINE_PRIM(SteamWrap_RestartAppIfNecessary, 1);
 
 //-----------------------------------------------------------------------------------------------------------
+value SteamWrap_IsOverlayEnabled()
+{
+	bool result = SteamUtils()->IsOverlayEnabled();
+	return alloc_bool(result);
+}
+DEFINE_PRIM(SteamWrap_IsOverlayEnabled, 0);
+
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_BOverlayNeedsPresent()
+{
+	bool result = SteamUtils()->BOverlayNeedsPresent();
+	return alloc_bool(result);
+}
+DEFINE_PRIM(SteamWrap_BOverlayNeedsPresent, 0);
+
+//-----------------------------------------------------------------------------------------------------------
 value SteamWrap_IsSteamRunning()
 {
 	bool result = SteamAPI_IsSteamRunning();
@@ -921,6 +945,35 @@ value SteamWrap_ShowBindingPanel(value controllerHandle)
 	return alloc_bool(result);
 }
 DEFINE_PRIM(SteamWrap_ShowBindingPanel, 1);
+
+//-----------------------------------------------------------------------------------------------------------
+int SteamWrap_ShowGamepadTextInput(int inputMode, int lineMode, const char * description, int charMax, const char * existingText)
+{
+	uint32 u_charMax = charMax;
+	
+	EGamepadTextInputMode eInputMode = static_cast<EGamepadTextInputMode>(inputMode);
+	EGamepadTextInputLineMode eLineInputMode = static_cast<EGamepadTextInputLineMode>(lineMode);
+	
+	int result = SteamUtils()->ShowGamepadTextInput(eInputMode, eLineInputMode, description, u_charMax, existingText);
+	return result;
+
+}
+DEFINE_PRIME5(SteamWrap_ShowGamepadTextInput);
+
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_GetEnteredGamepadTextInput()
+{
+	uint32 length = SteamUtils()->GetEnteredGamepadTextLength();
+	char *pchText;
+	bool result = GetEnteredGamepadTextInput(&pchText, length);
+	if(result)
+	{
+		return alloc_string(pchText);
+	}
+	return alloc_string("");
+
+}
+DEFINE_PRIM(SteamWrap_GetEnteredGamepadTextInput, 0);
 
 //-----------------------------------------------------------------------------------------------------------
 value SteamWrap_GetConnectedControllers()
