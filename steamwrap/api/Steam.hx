@@ -49,7 +49,8 @@ class Steam
 	public static var ugc(default, null):UGC;
 	
 	//User-settable callbacks:
-	
+
+	public static var whenGamepadTextInputDismissed:String->Void;
 	public static var whenAchievementStored:String->Void;
 	public static var whenLeaderboardScoreDownloaded:LeaderboardScore->Void;
 	public static var whenLeaderboardScoreUploaded:LeaderboardScore->Void;
@@ -412,7 +413,17 @@ class Steam
 				
 			case "UserAchievementStored":
 				if (whenAchievementStored != null) whenAchievementStored(data);
-				
+			
+			case "GamepadTextInputDismissed":
+				if (whenGamepadTextInputDismissed != null) {
+					if (success) {
+						whenGamepadTextInputDismissed(controllers.getEnteredGamepadTextInput());
+					}
+					else {
+						whenGamepadTextInputDismissed(null);
+					}
+				}
+			
 			case "GlobalStatsReceived":
 				haveGlobalStats = success;
 				

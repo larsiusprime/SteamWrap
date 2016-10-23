@@ -20,7 +20,7 @@ AutoGCRoot *g_eventHandler = 0;
 // Event
 //-----------------------------------------------------------------------------------------------------------
 static const char* kEventTypeNone = "None";
-static const char* kEventTypeOnGamepadTextInputDismissed = "GamepadTextInputDismissed_t";
+static const char* kEventTypeOnGamepadTextInputDismissed = "GamepadTextInputDismissed";
 static const char* kEventTypeOnUserStatsReceived = "UserStatsReceived";
 static const char* kEventTypeOnUserStatsStored = "UserStatsStored";
 static const char* kEventTypeOnUserAchievementStored = "UserAchievementStored";
@@ -148,7 +148,7 @@ public:
  		m_CallbackUserStatsReceived( this, &CallbackHandler::OnUserStatsReceived ),
  		m_CallbackUserStatsStored( this, &CallbackHandler::OnUserStatsStored ),
  		m_CallbackAchievementStored( this, &CallbackHandler::OnAchievementStored ),
-		m_CallbackGamepadTextInputDismissed( this, &CallbackHandler:OnGamepadTextInputDismissed )
+		m_CallbackGamepadTextInputDismissed( this, &CallbackHandler::OnGamepadTextInputDismissed )
 	{}
 
 	STEAM_CALLBACK( CallbackHandler, OnUserStatsReceived, UserStatsReceived_t, m_CallbackUserStatsReceived );
@@ -964,12 +964,15 @@ DEFINE_PRIME5(SteamWrap_ShowGamepadTextInput);
 value SteamWrap_GetEnteredGamepadTextInput()
 {
 	uint32 length = SteamUtils()->GetEnteredGamepadTextLength();
-	char *pchText;
-	bool result = GetEnteredGamepadTextInput(&pchText, length);
+	char *pchText = (char *)malloc(length);
+	bool result = SteamUtils()->GetEnteredGamepadTextInput(pchText, length);
 	if(result)
 	{
-		return alloc_string(pchText);
+		value returnValue = alloc_string(pchText);
+		free(pchText);
+		return returnValue;
 	}
+	free(pchText);
 	return alloc_string("");
 
 }
