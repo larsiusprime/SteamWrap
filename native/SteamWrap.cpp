@@ -882,6 +882,14 @@ value SteamWrap_BOverlayNeedsPresent()
 DEFINE_PRIM(SteamWrap_BOverlayNeedsPresent, 0);
 
 //-----------------------------------------------------------------------------------------------------------
+value SteamWrap_IsSteamInBigPictureMode()
+{
+	bool result = SteamUtils()->IsSteamInBigPictureMode();
+	return alloc_bool(result);
+}
+DEFINE_PRIM(SteamWrap_IsSteamInBigPictureMode, 0);
+
+//-----------------------------------------------------------------------------------------------------------
 value SteamWrap_IsSteamRunning()
 {
 	bool result = SteamAPI_IsSteamRunning();

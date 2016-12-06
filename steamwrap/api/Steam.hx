@@ -81,6 +81,7 @@ class Steam
 			SteamWrap_GetStatInt = cpp.Lib.load("steamwrap", "SteamWrap_GetStatInt", 1);
 			SteamWrap_IndicateAchievementProgress = cpp.Lib.load("steamwrap", "SteamWrap_IndicateAchievementProgress", 3);
 			SteamWrap_Init = cpp.Lib.load("steamwrap", "SteamWrap_Init", 2);
+			SteamWrap_IsSteamInBigPictureMode = cpp.Lib.load("steamwrap", "SteamWrap_IsSteamInBigPictureMode", 0);
 			SteamWrap_IsSteamRunning = cpp.Lib.load("steamwrap", "SteamWrap_IsSteamRunning", 0);
 			SteamWrap_IsOverlayEnabled = cpp.Lib.load("steamwrap", "SteamWrap_IsOverlayEnabled", 0);
 			SteamWrap_BOverlayNeedsPresent = cpp.Lib.load("steamwrap", "SteamWrap_BOverlayNeedsPresent", 0);
@@ -237,14 +238,26 @@ class Steam
 	}
 	
 	public static function isOverlayEnabled():Bool {
+		if (!active)
+			return false;
 		return SteamWrap_IsOverlayEnabled();
 	}
 	
 	public static function BOverlayNeedsPresent() {
+		if (!active)
+			return false;
 		return SteamWrap_BOverlayNeedsPresent();
 	}
 	
+	public static function isSteamInBigPictureMode() {
+		if (!active)
+			return false;
+		return SteamWrap_IsSteamInBigPictureMode();
+	}
+	
 	public static function isSteamRunning() {
+		if (!active)
+			return false;
 		try{
 			return SteamWrap_IsSteamRunning();
 		}
@@ -266,10 +279,12 @@ class Steam
 	}
 	
 	public static function openOverlay(url:String) {
+		if (!active) return;
 		SteamWrap_OpenOverlay(url);
 	}
 	
-	public static function restartAppInSteam() {
+	public static function restartAppInSteam():Bool {
+		if (!active) return false;
 		return SteamWrap_RestartAppIfNecessary(appId);
 	}
 	
@@ -485,6 +500,7 @@ class Steam
 	private static var SteamWrap_RestartAppIfNecessary:Dynamic;
 	private static var SteamWrap_IsOverlayEnabled:Dynamic;
 	private static var SteamWrap_BOverlayNeedsPresent:Dynamic;
+	private static var SteamWrap_IsSteamInBigPictureMode:Dynamic;
 	private static var SteamWrap_IsSteamRunning:Dynamic;
 	private static var SteamWrap_GetCurrentGameLanguage:Dynamic;
 	private static var SteamWrap_OpenOverlay:Dynamic;
