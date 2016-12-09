@@ -67,7 +67,7 @@ class Cloud
 	private var SteamWrap_GetFileCount     = Loader.load("SteamWrap_GetFileCount", "ii");
 	private var SteamWrap_GetFileExists    = Loader.load("SteamWrap_GetFileSize", "ci");
 	private var SteamWrap_GetFileSize      = Loader.load("SteamWrap_GetFileSize", "ci");
-	private var SteamWrap_GetFileShare     = Loader.load("SteamWrap_GetFileShare", "ci");
+	private var SteamWrap_GetFileShare     = Loader.load("SteamWrap_GetFileShare", "cv");
 	
 	private function new(appId_:Int, CustomTrace:String->Void) {
 		#if sys		//TODO: figure out what targets this will & won't work with and upate this guard
