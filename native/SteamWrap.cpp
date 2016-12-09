@@ -217,7 +217,6 @@ void CallbackHandler::SubmitUGCItemUpdate(UGCUpdateHandle_t handle, const char *
 
 void CallbackHandler::OnItemUpdateSubmitted(SubmitItemUpdateResult_t *pCallback, bool bIOFailure)
 {
-	std::cout << std::endl << "eResult: " << pCallback->m_eResult << std::endl;
 	if(	pCallback->m_eResult == k_EResultInsufficientPrivilege ||
 		pCallback->m_eResult == k_EResultTimeout ||
 		pCallback->m_eResult == k_EResultNotLoggedOn ||
@@ -306,11 +305,10 @@ bool CallbackHandler::UploadScore(const std::string& leaderboardId, int score, i
  	return true;
 }
 
-bool CallbackHandler::FileShare(const char * fileName)
+void CallbackHandler::FileShare(const char * fileName)
 {
 	SteamAPICall_t hSteamAPICall = SteamRemoteStorage()->FileShare(fileName);
-	m_callResultFileShare.Set(hSteamAPICall, this, &CallbackHandler::OnFileShare);
-	return true;
+	m_callResultFileShare.Set(hSteamAPICall, this, &CallbackHandler::OnFileShared);
 }
 
 static std::string toLeaderboardScore(const char* leaderboardName, int score, int detail, int rank)
@@ -958,7 +956,7 @@ DEFINE_PRIME1(SteamWrap_GetFileSize);
 //-----------------------------------------------------------------------------------------------------------
 int SteamWrap_GetFileExists(const char * fileName)
 {
-	bool exists = SteamRemoteStorage()->GetFileExists(fileName);
+	bool exists = SteamRemoteStorage()->FileExists(fileName);
 	return exists;
 }
 DEFINE_PRIME1(SteamWrap_GetFileExists);
@@ -966,20 +964,20 @@ DEFINE_PRIME1(SteamWrap_GetFileExists);
 //-----------------------------------------------------------------------------------------------------------
 value SteamWrap_FileRead(value fileName)
 {
-	if (!val_is_string(name) || !CheckInit())
+	if (!val_is_string(fileName) || !CheckInit())
 		return alloc_int(0);
 	
 	const char * fName = val_string(fileName);
 	
-	bool exists = SteamRemoteStorage()->GetFileExists(fName);
+	bool exists = SteamRemoteStorage()->FileExists(fName);
 	if(!exists) return alloc_int(0);
 	
 	int length = SteamRemoteStorage()->GetFileSize(fName);
 	
-	void *bytesData;	
+	char *bytesData = NULL;
 	int32 result = SteamRemoteStorage()->FileRead(fName, bytesData, length);
 	
-	return alloc_buffer(bytesData);
+	return buffer_val(alloc_buffer(bytesData));
 }
 DEFINE_PRIM(SteamWrap_FileRead, 1);
 
@@ -993,7 +991,7 @@ value SteamWrap_FileWrite(value fileName, value haxeBytes)
 	if(bytes.data == 0)
 		return alloc_bool(false);
 	
-	bool result = SteamRemoteStorage()->FileWrite(val_string(fileName), bytes, length);
+	bool result = SteamRemoteStorage()->FileWrite(val_string(fileName), bytes.data, bytes.length);
 	return alloc_bool(result);
 }
 DEFINE_PRIM(SteamWrap_FileWrite, 2);
@@ -1007,12 +1005,11 @@ int SteamWrap_FileDelete(const char * fileName)
 DEFINE_PRIME1(SteamWrap_FileDelete);
 
 //-----------------------------------------------------------------------------------------------------------
-int SteamWrap_FileShare(const char * fileName)
+void SteamWrap_FileShare(const char * fileName)
 {
-	bool result = s_callbackHandler->FileShare(fileName);
-	return alloc_bool(result);
+	s_callbackHandler->FileShare(fileName);
 }
-DEFINE_PRIME1(SteamWrap_FileShare);
+DEFINE_PRIME1v(SteamWrap_FileShare);
 
 //-----------------------------------------------------------------------------------------------------------
 

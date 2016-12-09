@@ -47,7 +47,7 @@ class Cloud
 	}
 	
 	public function FileShare(name:String) {
-		return SteamWrap_FileShare(name);
+		SteamWrap_FileShare(name);
 	}
 	
 	public function FileWrite(name:String, data:Bytes):Void {
