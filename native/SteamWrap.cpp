@@ -31,6 +31,7 @@ static const char* kEventTypeOnGlobalStatsReceived = "GlobalStatsReceived";
 static const char* kEventTypeUGCLegalAgreement = "UGCLegalAgreementStatus";
 static const char* kEventTypeUGCItemCreated = "UGCItemCreated";
 static const char* kEventTypeOnItemUpdateSubmitted = "UGCItemUpdateSubmitted";
+static const char* kEventTypeOnFileShared = "RemoteStorageFileShared";
 
 //A simple data structure that holds on to the native 64-bit handles and maps them to regular ints.
 //This is because it is cumbersome to pass back 64-bit values over CFFI, and strictly speaking, the haxe 
@@ -179,6 +180,10 @@ public:
 	void SubmitUGCItemUpdate(UGCUpdateHandle_t handle, const char *pchChangeNote);
 	void OnItemUpdateSubmitted( SubmitItemUpdateResult_t *pResult, bool bIOFailure);
 	CCallResult<CallbackHandler, SubmitItemUpdateResult_t> m_callResultSubmitUGCItemUpdate;
+	
+	void FileShare(const char* fileName);
+	void OnFileShared( RemoteStorageFileShareResult_t *pResult, bool bIOFailure);
+	CCallResult<CallbackHandler, RemoteStorageFileShareResult_t> m_callResultFileShare;
 };
 
 void CallbackHandler::OnGamepadTextInputDismissed( GamepadTextInputDismissed_t *pCallback )
@@ -301,6 +306,13 @@ bool CallbackHandler::UploadScore(const std::string& leaderboardId, int score, i
  	return true;
 }
 
+bool CallbackHandler::FileShare(const char * fileName)
+{
+	SteamAPICall_t hSteamAPICall = SteamRemoteStorage()->FileShare(fileName);
+	m_callResultFileShare.Set(hSteamAPICall, this, &CallbackHandler::OnFileShare);
+	return true;
+}
+
 static std::string toLeaderboardScore(const char* leaderboardName, int score, int detail, int rank)
 {
 	std::ostringstream data;
@@ -323,6 +335,24 @@ void CallbackHandler::OnScoreUploaded(LeaderboardScoreUploaded_t *pCallback, boo
 	else
 	{
 		SendEvent(Event(kEventTypeOnScoreUploaded, false));
+	}
+}
+
+void CallbackHandler::OnFileShared(RemoteStorageFileShareResult_t *pCallback, bool bIOFailure)
+{
+	if (pCallback->m_eResult == k_EResultOK && !bIOFailure)
+	{
+		UGCHandle_t rawHandle = pCallback->m_hFile;
+		
+		//convert uint64 handle to string
+		std::ostringstream strHandle;
+		strHandle << rawHandle;
+		
+		SendEvent(Event(kEventTypeOnFileShared, true, strHandle.str()));
+	}
+	else
+	{
+		SendEvent(Event(kEventTypeOnFileShared, false));
 	}
 }
 
@@ -904,6 +934,90 @@ value SteamWrap_GetCurrentGameLanguage()
 	return alloc_string(result);
 }
 DEFINE_PRIM(SteamWrap_GetCurrentGameLanguage, 0);
+
+
+//STEAM CLOUD------------------------------------------------------------------------------------------------
+
+
+//-----------------------------------------------------------------------------------------------------------
+int SteamWrap_GetFileCount(int dummy)
+{
+	int fileCount = SteamRemoteStorage()->GetFileCount();
+	return fileCount;
+}
+DEFINE_PRIME1(SteamWrap_GetFileCount);
+
+//-----------------------------------------------------------------------------------------------------------
+int SteamWrap_GetFileSize(const char * fileName)
+{
+	int fileSize = SteamRemoteStorage()->GetFileSize(fileName);
+	return fileSize;
+}
+DEFINE_PRIME1(SteamWrap_GetFileSize);
+
+//-----------------------------------------------------------------------------------------------------------
+int SteamWrap_GetFileExists(const char * fileName)
+{
+	bool exists = SteamRemoteStorage()->GetFileExists(fileName);
+	return exists;
+}
+DEFINE_PRIME1(SteamWrap_GetFileExists);
+
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_FileRead(value fileName)
+{
+	if (!val_is_string(name) || !CheckInit())
+		return alloc_int(0);
+	
+	const char * fName = val_string(fileName);
+	
+	bool exists = SteamRemoteStorage()->GetFileExists(fName);
+	if(!exists) return alloc_int(0);
+	
+	int length = SteamRemoteStorage()->GetFileSize(fName);
+	
+	void *bytesData;	
+	int32 result = SteamRemoteStorage()->FileRead(fName, bytesData, length);
+	
+	return alloc_buffer(bytesData);
+}
+DEFINE_PRIM(SteamWrap_FileRead, 1);
+
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_FileWrite(value fileName, value haxeBytes)
+{
+	if (!val_is_string(fileName) || !CheckInit())
+		return alloc_bool(false);
+	
+	CffiBytes bytes = getByteData(haxeBytes);
+	if(bytes.data == 0)
+		return alloc_bool(false);
+	
+	bool result = SteamRemoteStorage()->FileWrite(val_string(fileName), bytes, length);
+	return alloc_bool(result);
+}
+DEFINE_PRIM(SteamWrap_FileWrite, 2);
+
+//-----------------------------------------------------------------------------------------------------------
+int SteamWrap_FileDelete(const char * fileName)
+{
+	bool result = SteamRemoteStorage()->FileDelete(fileName);
+	return result;
+}
+DEFINE_PRIME1(SteamWrap_FileDelete);
+
+//-----------------------------------------------------------------------------------------------------------
+int SteamWrap_FileShare(const char * fileName)
+{
+	bool result = s_callbackHandler->FileShare(fileName);
+	return alloc_bool(result);
+}
+DEFINE_PRIME1(SteamWrap_FileShare);
+
+//-----------------------------------------------------------------------------------------------------------
+
+//STEAM CONTROLLER-------------------------------------------------------------------------------------------
+
 
 //-----------------------------------------------------------------------------------------------------------
 value SteamWrap_InitControllers()

@@ -58,6 +58,8 @@ class Steam
 	public static var whenUGCItemIdReceived:String->Void;
 	public static var whenUGCItemUpdateComplete:Bool->String->Void;
 	
+	public static var whenRemoteStorageFileShared:Bool->String->Void;
+	
 	/**
 	 * @param appId_	Your Steam APP ID (the numbers on the end of your store page URL - store.steampowered.com/app/XYZ)
 	 * @param notificationPosition	The position of the Steam Overlay Notification box.
@@ -471,6 +473,10 @@ class Steam
 					whenUGCItemUpdateComplete(success, data);
 				}
 			case "UGCLegalAgreementStatus":
+			case "RemoteStorageFileShared":
+				if (whenRemoteStorageFileShared != null) {
+					whenRemoteStorageFileShared(success, data);
+				}
 		}
 	}
 	
