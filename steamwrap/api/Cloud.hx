@@ -36,6 +36,21 @@ class Cloud
 		return SteamWrap_GetFileSize(name);
 	}
 	
+	public function GetQuota():{total:Int, available:Int}
+	{
+		var str = SteamWrap_GetQuota();
+		var arr = str.split(",");
+		if (arr != null && arr.length == 2)
+		{
+			var total = Std.parseInt(arr[0]);
+			if (total == null) total = 0;
+			var available = Std.parseInt(arr[1]);
+			if (available == null) available = 0;
+			return {total:total, available:available};
+		}
+		return {total:0, available:0};
+	}
+	
 	public function FileRead(name:String):Bytes {
 		if !(GetFileExists(name))
 		{
@@ -54,6 +69,14 @@ class Cloud
 		SteamWrap_FileWrite(name, data, data.length);
 	}
 	
+	public function IsCloudEnabledForApp():Bool {
+		return SteamWrap_IsCloudEnabledForApp(0) == 1;
+	}
+	
+	public function SetCloudEnabledForApp(b:Bool):Bool {
+		SteamWrap_SetCloudEnabledForApp(b);
+	}
+	
 	/*************PRIVATE***************/
 	
 	private var customTrace:String->Void;
@@ -62,12 +85,15 @@ class Cloud
 	//Old-school CFFI calls:
 	private var SteamWrap_FileRead:Dynamic;
 	private var SteamWrap_FileWrite:Dynamic;
+	private var SteamWrap_GetQuota:Dynamic;
 	
 	//CFFI PRIME calls:
 	private var SteamWrap_GetFileCount     = Loader.load("SteamWrap_GetFileCount", "ii");
 	private var SteamWrap_GetFileExists    = Loader.load("SteamWrap_GetFileSize", "ci");
 	private var SteamWrap_GetFileSize      = Loader.load("SteamWrap_GetFileSize", "ci");
 	private var SteamWrap_GetFileShare     = Loader.load("SteamWrap_GetFileShare", "cv");
+	private var SteamWrap_IsCloudEnabledForApp   = Loader.load("SteamWrap_IsCloudEnabledForApp", "ii");
+	private var SteamWrap_SetCloudEnabledForApp  = Loader.load("SteamWrap_SetCloudEnabledForApp", "iv");
 	
 	private function new(appId_:Int, CustomTrace:String->Void) {
 		#if sys		//TODO: figure out what targets this will & won't work with and upate this guard
@@ -81,6 +107,7 @@ class Cloud
 			//Old-school CFFI calls:
 			SteamWrap_FileRead  = cpp.Lib.load("steamwrap", "FileRead", 1);
 			SteamWrap_FileWrite = cpp.Lib.load("steamwrap", "FileWrite", 2);
+			SteamWrap_GetQuota = cpp.Lib.load("steamwrap", "GetQuota", 0);
 		}
 		catch (e:Dynamic) {
 			customTrace("Running non-Steam version (" + e + ")");

@@ -1012,6 +1012,35 @@ void SteamWrap_FileShare(const char * fileName)
 DEFINE_PRIME1v(SteamWrap_FileShare);
 
 //-----------------------------------------------------------------------------------------------------------
+bool SteamWrap_IsCloudEnabledForApp(int dummy)
+{
+	bool result = SteamRemoteStorage()->IsCloudEnabledForApp();
+	return result;
+}
+DEFINE_PRIME1(SteamWrap_IsCloudEnabledForApp);
+
+//-----------------------------------------------------------------------------------------------------------
+void SteamWrap_SetCloudEnabledForApp(bool enabled)
+{
+	SteamRemoteStorage()->SetCloudEnabledForApp(enabled);
+}
+DEFINE_PRIME1v(SteamWrap_SetCloudEnabledForApp);
+
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_GetQuota()
+{
+	uint64 total = 0;
+	uint64 available = 0;
+	
+	//convert uint64 handle to string
+	std::ostringstream data;
+	data << total << "," << available;
+	
+	return alloc_string(data.str().c_str());
+}
+DEFINE_PRIM(SteamWrap_GetQuota,0);
+
+//-----------------------------------------------------------------------------------------------------------
 
 //STEAM CONTROLLER-------------------------------------------------------------------------------------------
 
