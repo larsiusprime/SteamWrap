@@ -1012,15 +1012,15 @@ void SteamWrap_FileShare(const char * fileName)
 DEFINE_PRIME1v(SteamWrap_FileShare);
 
 //-----------------------------------------------------------------------------------------------------------
-bool SteamWrap_IsCloudEnabledForApp(int dummy)
+int SteamWrap_IsCloudEnabledForApp(int dummy)
 {
-	bool result = SteamRemoteStorage()->IsCloudEnabledForApp();
+	int result = SteamRemoteStorage()->IsCloudEnabledForApp();
 	return result;
 }
 DEFINE_PRIME1(SteamWrap_IsCloudEnabledForApp);
 
 //-----------------------------------------------------------------------------------------------------------
-void SteamWrap_SetCloudEnabledForApp(bool enabled)
+void SteamWrap_SetCloudEnabledForApp(int enabled)
 {
 	SteamRemoteStorage()->SetCloudEnabledForApp(enabled);
 }

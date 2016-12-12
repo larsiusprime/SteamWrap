@@ -75,7 +75,8 @@ class Cloud
 	}
 	
 	public function SetCloudEnabledForApp(b:Bool):Void {
-		SteamWrap_SetCloudEnabledForApp(b ? 1 : 0);
+		var i = b ? 1 : 0;
+		SteamWrap_SetCloudEnabledForApp(i);
 	}
 	
 	/*************PRIVATE***************/
