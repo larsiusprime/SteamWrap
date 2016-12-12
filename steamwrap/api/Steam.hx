@@ -48,6 +48,11 @@ class Steam
 	 */
 	public static var ugc(default, null):UGC;
 	
+	/**
+	 * The Steam Cloud API
+	 */
+	public static var cloud(default, null):Cloud;
+	
 	//User-settable callbacks:
 
 	public static var whenGamepadTextInputDismissed:String->Void;
@@ -121,6 +126,7 @@ class Steam
 			//initialize other API's:
 			ugc = new UGC(appId, customTrace);
 			controllers = new Controller(customTrace);
+			cloud = new Cloud(appId, customTrace);
 		}
 		else {
 			customTrace("Steam failed to activate");

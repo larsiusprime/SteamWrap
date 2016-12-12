@@ -38,7 +38,7 @@ class Cloud
 	
 	public function GetQuota():{total:Int, available:Int}
 	{
-		var str = SteamWrap_GetQuota();
+		var str:String = SteamWrap_GetQuota();
 		var arr = str.split(",");
 		if (arr != null && arr.length == 2)
 		{
@@ -51,14 +51,15 @@ class Cloud
 		return {total:0, available:0};
 	}
 	
-	public function FileRead(name:String):Bytes {
-		if !(GetFileExists(name))
+	public function FileRead(name:String):Bytes
+	{
+		if (!GetFileExists(name))
 		{
 			return null;
 		}
 		var length = GetFileSize(name);
 		var bytesData:BytesData = SteamWrap_FileRead(name);
-		return new Bytes(length, bytesData);
+		return Bytes.ofData(bytesData);
 	}
 	
 	public function FileShare(name:String) {
@@ -73,8 +74,8 @@ class Cloud
 		return SteamWrap_IsCloudEnabledForApp(0) == 1;
 	}
 	
-	public function SetCloudEnabledForApp(b:Bool):Bool {
-		SteamWrap_SetCloudEnabledForApp(b);
+	public function SetCloudEnabledForApp(b:Bool):Void {
+		SteamWrap_SetCloudEnabledForApp(b ? 1 : 0);
 	}
 	
 	/*************PRIVATE***************/
@@ -91,7 +92,7 @@ class Cloud
 	private var SteamWrap_GetFileCount     = Loader.load("SteamWrap_GetFileCount", "ii");
 	private var SteamWrap_GetFileExists    = Loader.load("SteamWrap_GetFileSize", "ci");
 	private var SteamWrap_GetFileSize      = Loader.load("SteamWrap_GetFileSize", "ci");
-	private var SteamWrap_GetFileShare     = Loader.load("SteamWrap_GetFileShare", "cv");
+	private var SteamWrap_FileShare     = Loader.load("SteamWrap_FileShare", "cv");
 	private var SteamWrap_IsCloudEnabledForApp   = Loader.load("SteamWrap_IsCloudEnabledForApp", "ii");
 	private var SteamWrap_SetCloudEnabledForApp  = Loader.load("SteamWrap_SetCloudEnabledForApp", "iv");
 	
