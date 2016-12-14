@@ -954,12 +954,12 @@ int SteamWrap_GetFileSize(const char * fileName)
 DEFINE_PRIME1(SteamWrap_GetFileSize);
 
 //-----------------------------------------------------------------------------------------------------------
-int SteamWrap_GetFileExists(const char * fileName)
+int SteamWrap_FileExists(const char * fileName)
 {
 	bool exists = SteamRemoteStorage()->FileExists(fileName);
 	return exists;
 }
-DEFINE_PRIME1(SteamWrap_GetFileExists);
+DEFINE_PRIME1(SteamWrap_FileExists);
 
 //-----------------------------------------------------------------------------------------------------------
 value SteamWrap_FileRead(value fileName)
@@ -992,6 +992,7 @@ value SteamWrap_FileWrite(value fileName, value haxeBytes)
 		return alloc_bool(false);
 	
 	bool result = SteamRemoteStorage()->FileWrite(val_string(fileName), bytes.data, bytes.length);
+	
 	return alloc_bool(result);
 }
 DEFINE_PRIM(SteamWrap_FileWrite, 2);
@@ -1084,9 +1085,7 @@ value SteamWrap_ShowBindingPanel(value controllerHandle)
 	
 	int i_handle = val_int(controllerHandle);
 	
-	printf("ShowBindingPanel(%d)\n",i_handle);
 	ControllerHandle_t c_handle = i_handle != -1 ? mapControllers.get(i_handle) : STEAM_CONTROLLER_HANDLE_ALL_CONTROLLERS;
-	printf("c_handle = %I64d\n",c_handle);
 	
 	bool result = SteamController()->ShowBindingPanel(c_handle);
 	

@@ -25,15 +25,15 @@ class Cloud
 	//TODO: these all need documentation headers
 	
 	public function GetFileCount():Int {
-		return SteamWrap_GetFileCount(0);
+		return SteamWrap_GetFileCount.call(0);
 	}
 	
-	public function GetFileExists(name:String):Bool {
-		return SteamWrap_GetFileExists(name) == 1;
+	public function FileExists(name:String):Bool {
+		return SteamWrap_FileExists.call(name) == 1;
 	}
 	
 	public function GetFileSize(name:String):Int {
-		return SteamWrap_GetFileSize(name);
+		return SteamWrap_GetFileSize.call(name);
 	}
 	
 	public function GetQuota():{total:Int, available:Int}
@@ -53,7 +53,7 @@ class Cloud
 	
 	public function FileRead(name:String):Bytes
 	{
-		if (!GetFileExists(name))
+		if (!FileExists(name))
 		{
 			return null;
 		}
@@ -63,20 +63,25 @@ class Cloud
 	}
 	
 	public function FileShare(name:String) {
-		SteamWrap_FileShare(name);
+		SteamWrap_FileShare.call(name);
 	}
 	
-	public function FileWrite(name:String, data:Bytes):Void {
-		SteamWrap_FileWrite(name, data, data.length);
+	public function FileWrite(name:String, data:Bytes):Void
+	{
+		SteamWrap_FileWrite(name, data);
+	}
+	
+	public function FileDelete(name:String):Bool {
+		return SteamWrap_FileDelete.call(name) == 1;
 	}
 	
 	public function IsCloudEnabledForApp():Bool {
-		return SteamWrap_IsCloudEnabledForApp(0) == 1;
+		return SteamWrap_IsCloudEnabledForApp.call(0) == 1;
 	}
 	
 	public function SetCloudEnabledForApp(b:Bool):Void {
 		var i = b ? 1 : 0;
-		SteamWrap_SetCloudEnabledForApp(i);
+		SteamWrap_SetCloudEnabledForApp.call(i);
 	}
 	
 	/*************PRIVATE***************/
@@ -91,7 +96,8 @@ class Cloud
 	
 	//CFFI PRIME calls:
 	private var SteamWrap_GetFileCount     = Loader.load("SteamWrap_GetFileCount", "ii");
-	private var SteamWrap_GetFileExists    = Loader.load("SteamWrap_GetFileSize", "ci");
+	private var SteamWrap_FileExists    = Loader.load("SteamWrap_FileExists", "ci");
+	private var SteamWrap_FileDelete    = Loader.load("SteamWrap_FileDelete", "ci");
 	private var SteamWrap_GetFileSize      = Loader.load("SteamWrap_GetFileSize", "ci");
 	private var SteamWrap_FileShare     = Loader.load("SteamWrap_FileShare", "cv");
 	private var SteamWrap_IsCloudEnabledForApp   = Loader.load("SteamWrap_IsCloudEnabledForApp", "ii");
