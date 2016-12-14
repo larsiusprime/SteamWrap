@@ -974,10 +974,10 @@ value SteamWrap_FileRead(value fileName)
 	
 	int length = SteamRemoteStorage()->GetFileSize(fName);
 	
-	char *bytesData = NULL;
+	char *bytesData = (char *)malloc(length);
 	int32 result = SteamRemoteStorage()->FileRead(fName, bytesData, length);
 	
-	return buffer_val(alloc_buffer(bytesData));
+	return alloc_string(bytesData);
 }
 DEFINE_PRIM(SteamWrap_FileRead, 1);
 

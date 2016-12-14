@@ -51,15 +51,14 @@ class Cloud
 		return {total:0, available:0};
 	}
 	
-	public function FileRead(name:String):Bytes
+	public function FileRead(name:String):String
 	{
 		if (!FileExists(name))
 		{
 			return null;
 		}
-		var length = GetFileSize(name);
-		var bytesData:BytesData = SteamWrap_FileRead(name);
-		return Bytes.ofData(bytesData);
+		var fileData:String = SteamWrap_FileRead(name);
+		return fileData;
 	}
 	
 	public function FileShare(name:String) {
