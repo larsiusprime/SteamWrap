@@ -31,6 +31,7 @@ static const char* kEventTypeOnGlobalStatsReceived = "GlobalStatsReceived";
 static const char* kEventTypeUGCLegalAgreement = "UGCLegalAgreementStatus";
 static const char* kEventTypeUGCItemCreated = "UGCItemCreated";
 static const char* kEventTypeOnItemUpdateSubmitted = "UGCItemUpdateSubmitted";
+static const char* kEventTypeOnFileShared = "RemoteStorageFileShared";
 
 //A simple data structure that holds on to the native 64-bit handles and maps them to regular ints.
 //This is because it is cumbersome to pass back 64-bit values over CFFI, and strictly speaking, the haxe 
@@ -179,6 +180,10 @@ public:
 	void SubmitUGCItemUpdate(UGCUpdateHandle_t handle, const char *pchChangeNote);
 	void OnItemUpdateSubmitted( SubmitItemUpdateResult_t *pResult, bool bIOFailure);
 	CCallResult<CallbackHandler, SubmitItemUpdateResult_t> m_callResultSubmitUGCItemUpdate;
+	
+	void FileShare(const char* fileName);
+	void OnFileShared( RemoteStorageFileShareResult_t *pResult, bool bIOFailure);
+	CCallResult<CallbackHandler, RemoteStorageFileShareResult_t> m_callResultFileShare;
 };
 
 void CallbackHandler::OnGamepadTextInputDismissed( GamepadTextInputDismissed_t *pCallback )
@@ -212,7 +217,6 @@ void CallbackHandler::SubmitUGCItemUpdate(UGCUpdateHandle_t handle, const char *
 
 void CallbackHandler::OnItemUpdateSubmitted(SubmitItemUpdateResult_t *pCallback, bool bIOFailure)
 {
-	std::cout << std::endl << "eResult: " << pCallback->m_eResult << std::endl;
 	if(	pCallback->m_eResult == k_EResultInsufficientPrivilege ||
 		pCallback->m_eResult == k_EResultTimeout ||
 		pCallback->m_eResult == k_EResultNotLoggedOn ||
@@ -301,6 +305,12 @@ bool CallbackHandler::UploadScore(const std::string& leaderboardId, int score, i
  	return true;
 }
 
+void CallbackHandler::FileShare(const char * fileName)
+{
+	SteamAPICall_t hSteamAPICall = SteamRemoteStorage()->FileShare(fileName);
+	m_callResultFileShare.Set(hSteamAPICall, this, &CallbackHandler::OnFileShared);
+}
+
 static std::string toLeaderboardScore(const char* leaderboardName, int score, int detail, int rank)
 {
 	std::ostringstream data;
@@ -323,6 +333,24 @@ void CallbackHandler::OnScoreUploaded(LeaderboardScoreUploaded_t *pCallback, boo
 	else
 	{
 		SendEvent(Event(kEventTypeOnScoreUploaded, false));
+	}
+}
+
+void CallbackHandler::OnFileShared(RemoteStorageFileShareResult_t *pCallback, bool bIOFailure)
+{
+	if (pCallback->m_eResult == k_EResultOK && !bIOFailure)
+	{
+		UGCHandle_t rawHandle = pCallback->m_hFile;
+		
+		//convert uint64 handle to string
+		std::ostringstream strHandle;
+		strHandle << rawHandle;
+		
+		SendEvent(Event(kEventTypeOnFileShared, true, strHandle.str()));
+	}
+	else
+	{
+		SendEvent(Event(kEventTypeOnFileShared, false));
 	}
 }
 
@@ -905,6 +933,122 @@ value SteamWrap_GetCurrentGameLanguage()
 }
 DEFINE_PRIM(SteamWrap_GetCurrentGameLanguage, 0);
 
+
+//STEAM CLOUD------------------------------------------------------------------------------------------------
+
+
+//-----------------------------------------------------------------------------------------------------------
+int SteamWrap_GetFileCount(int dummy)
+{
+	int fileCount = SteamRemoteStorage()->GetFileCount();
+	return fileCount;
+}
+DEFINE_PRIME1(SteamWrap_GetFileCount);
+
+//-----------------------------------------------------------------------------------------------------------
+int SteamWrap_GetFileSize(const char * fileName)
+{
+	int fileSize = SteamRemoteStorage()->GetFileSize(fileName);
+	return fileSize;
+}
+DEFINE_PRIME1(SteamWrap_GetFileSize);
+
+//-----------------------------------------------------------------------------------------------------------
+int SteamWrap_FileExists(const char * fileName)
+{
+	bool exists = SteamRemoteStorage()->FileExists(fileName);
+	return exists;
+}
+DEFINE_PRIME1(SteamWrap_FileExists);
+
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_FileRead(value fileName)
+{
+	if (!val_is_string(fileName) || !CheckInit())
+		return alloc_int(0);
+	
+	const char * fName = val_string(fileName);
+	
+	bool exists = SteamRemoteStorage()->FileExists(fName);
+	if(!exists) return alloc_int(0);
+	
+	int length = SteamRemoteStorage()->GetFileSize(fName);
+	
+	char *bytesData = (char *)malloc(length);
+	int32 result = SteamRemoteStorage()->FileRead(fName, bytesData, length);
+	
+	value returnValue = alloc_string(bytesData);
+	
+	free(bytesData)
+	return return_string;
+}
+DEFINE_PRIM(SteamWrap_FileRead, 1);
+
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_FileWrite(value fileName, value haxeBytes)
+{
+	if (!val_is_string(fileName) || !CheckInit())
+		return alloc_bool(false);
+	
+	CffiBytes bytes = getByteData(haxeBytes);
+	if(bytes.data == 0)
+		return alloc_bool(false);
+	
+	bool result = SteamRemoteStorage()->FileWrite(val_string(fileName), bytes.data, bytes.length);
+	
+	return alloc_bool(result);
+}
+DEFINE_PRIM(SteamWrap_FileWrite, 2);
+
+//-----------------------------------------------------------------------------------------------------------
+int SteamWrap_FileDelete(const char * fileName)
+{
+	bool result = SteamRemoteStorage()->FileDelete(fileName);
+	return result;
+}
+DEFINE_PRIME1(SteamWrap_FileDelete);
+
+//-----------------------------------------------------------------------------------------------------------
+void SteamWrap_FileShare(const char * fileName)
+{
+	s_callbackHandler->FileShare(fileName);
+}
+DEFINE_PRIME1v(SteamWrap_FileShare);
+
+//-----------------------------------------------------------------------------------------------------------
+int SteamWrap_IsCloudEnabledForApp(int dummy)
+{
+	int result = SteamRemoteStorage()->IsCloudEnabledForApp();
+	return result;
+}
+DEFINE_PRIME1(SteamWrap_IsCloudEnabledForApp);
+
+//-----------------------------------------------------------------------------------------------------------
+void SteamWrap_SetCloudEnabledForApp(int enabled)
+{
+	SteamRemoteStorage()->SetCloudEnabledForApp(enabled);
+}
+DEFINE_PRIME1v(SteamWrap_SetCloudEnabledForApp);
+
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_GetQuota()
+{
+	uint64 total = 0;
+	uint64 available = 0;
+	
+	//convert uint64 handle to string
+	std::ostringstream data;
+	data << total << "," << available;
+	
+	return alloc_string(data.str().c_str());
+}
+DEFINE_PRIM(SteamWrap_GetQuota,0);
+
+//-----------------------------------------------------------------------------------------------------------
+
+//STEAM CONTROLLER-------------------------------------------------------------------------------------------
+
+
 //-----------------------------------------------------------------------------------------------------------
 value SteamWrap_InitControllers()
 {
@@ -944,9 +1088,7 @@ value SteamWrap_ShowBindingPanel(value controllerHandle)
 	
 	int i_handle = val_int(controllerHandle);
 	
-	printf("ShowBindingPanel(%d)\n",i_handle);
 	ControllerHandle_t c_handle = i_handle != -1 ? mapControllers.get(i_handle) : STEAM_CONTROLLER_HANDLE_ALL_CONTROLLERS;
-	printf("c_handle = %I64d\n",c_handle);
 	
 	bool result = SteamController()->ShowBindingPanel(c_handle);
 	

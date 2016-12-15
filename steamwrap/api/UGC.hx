@@ -16,7 +16,7 @@ class UGC
 	/*************PUBLIC***************/
 	
 	/**
-	 * Whether the controller API is initialized or not. If false, all calls will fail.
+	 * Whether the UGC API is initialized or not. If false, all calls will fail.
 	 */
 	public var active(default, null):Bool = false;
 	

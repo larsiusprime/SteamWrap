@@ -48,6 +48,11 @@ class Steam
 	 */
 	public static var ugc(default, null):UGC;
 	
+	/**
+	 * The Steam Cloud API
+	 */
+	public static var cloud(default, null):Cloud;
+	
 	//User-settable callbacks:
 
 	public static var whenGamepadTextInputDismissed:String->Void;
@@ -57,6 +62,8 @@ class Steam
 	public static var whenTrace:String->Void;
 	public static var whenUGCItemIdReceived:String->Void;
 	public static var whenUGCItemUpdateComplete:Bool->String->Void;
+	
+	public static var whenRemoteStorageFileShared:Bool->String->Void;
 	
 	/**
 	 * @param appId_	Your Steam APP ID (the numbers on the end of your store page URL - store.steampowered.com/app/XYZ)
@@ -119,6 +126,7 @@ class Steam
 			//initialize other API's:
 			ugc = new UGC(appId, customTrace);
 			controllers = new Controller(customTrace);
+			cloud = new Cloud(appId, customTrace);
 		}
 		else {
 			customTrace("Steam failed to activate");
@@ -471,6 +479,10 @@ class Steam
 					whenUGCItemUpdateComplete(success, data);
 				}
 			case "UGCLegalAgreementStatus":
+			case "RemoteStorageFileShared":
+				if (whenRemoteStorageFileShared != null) {
+					whenRemoteStorageFileShared(success, data);
+				}
 		}
 	}
 	
