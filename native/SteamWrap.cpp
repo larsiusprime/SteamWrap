@@ -979,8 +979,8 @@ value SteamWrap_FileRead(value fileName)
 	
 	value returnValue = alloc_string(bytesData);
 	
-	free(bytesData)
-	return return_string;
+	free(bytesData);
+	return returnValue;
 }
 DEFINE_PRIM(SteamWrap_FileRead, 1);
 
