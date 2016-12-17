@@ -538,10 +538,10 @@ class ControllerAnalogActionData
 	public var LEFTSTICK_DPADSOUTH = 32;
 	public var LEFTSTICK_DPADWEST = 33;
 	public var LEFTSTICK_DPADEAST = 34;
-	public var GRYRO_MOVE = 35;
-	public var GRYRO_PITCH = 36;
-	public var GRYRO_YAW = 37;
-	public var GRYRO_ROLL = 38;
+	public var GYRO_MOVE = 35;
+	public var GYRO_PITCH = 36;
+	public var GYRO_YAW = 37;
+	public var GYRO_ROLL = 38;
 	public var COUNT = 39;
 	
 	@:from private static function fromString (s:String):EControllerActionOrigin {
@@ -600,10 +600,10 @@ class ControllerAnalogActionData
 			case LEFTSTICK_DPADSOUTH:"stick_dpad_s";
 			case LEFTSTICK_DPADWEST: "stick_dpad_w";
 			case LEFTSTICK_DPADEAST: "stick_dpad_e";
-			case GRYRO_MOVE:         "gyro";
-			case GRYRO_PITCH:        "gyro_pitch";
-			case GRYRO_YAW:          "gyro_yaw";
-			case GRYRO_ROLL:         "gyro_roll";
+			case GYRO_MOVE:         "gyro";
+			case GYRO_PITCH:        "gyro_pitch";
+			case GYRO_YAW:          "gyro_yaw";
+			case GYRO_ROLL:         "gyro_roll";
 			default:                 "none";
 		}
 	}
