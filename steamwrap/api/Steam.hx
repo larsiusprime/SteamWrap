@@ -1,6 +1,8 @@
 package steamwrap.api;
 import cpp.Lib;
 import haxe.Int64;
+import steamwrap.api.Steam.EnumerateWorkshopFilesResult;
+import steamwrap.api.Steam.DownloadUGCResult;
 import steamwrap.helpers.Loader;
 
 private enum LeaderboardOp
@@ -53,6 +55,11 @@ class Steam
 	 */
 	public static var cloud(default, null):Cloud;
 	
+	/**
+	 * The Steam Workshop API
+	 */
+	public static var workshop(default, null):Workshop;
+	
 	//User-settable callbacks:
 
 	public static var whenGamepadTextInputDismissed:String->Void;
@@ -64,6 +71,11 @@ class Steam
 	public static var whenUGCItemUpdateComplete:Bool->String->Void;
 	
 	public static var whenRemoteStorageFileShared:Bool->String->Void;
+	public static var whenUserSharedWorkshopFilesEnumerated:Bool->EnumerateUserPublishedFilesResult->Void;
+	public static var whenPublishedWorkshopFilesEnumerated:Bool->EnumerateWorkshopFilesResult->Void;
+	public static var whenUserSubscribedFilesEnumerated:Bool->EnumerateUserSubscribedFilesResult->Void;
+	public static var whenUserPublishedFilesEnumerated:Bool->EnumerateUserPublishedFilesResult->Void;
+	public static var whenUGCDownloaded:Bool->DownloadUGCResult->Void;
 	
 	/**
 	 * @param appId_	Your Steam APP ID (the numbers on the end of your store page URL - store.steampowered.com/app/XYZ)
@@ -99,6 +111,7 @@ class Steam
 			SteamWrap_GetAchievementDisplayAttribute = cpp.Lib.load("steamwrap", "SteamWrap_GetAchievementDisplayAttribute", 2);
 			SteamWrap_GetNumAchievements = cpp.Lib.load("steamwrap", "SteamWrap_GetNumAchievements", 0);
 			SteamWrap_GetAchievementName = cpp.Lib.load("steamwrap", "SteamWrap_GetAchievementName", 1);
+			SteamWrap_GetSteamID = cpp.Lib.load("steamwrap", "SteamWrap_GetSteamID", 0);
 			SteamWrap_SetStat = cpp.Lib.load("steamwrap", "SteamWrap_SetStat", 2);
 			SteamWrap_SetStatFloat = cpp.Lib.load("steamwrap", "SteamWrap_SetStatFloat", 2);
 			SteamWrap_SetStatInt = cpp.Lib.load("steamwrap", "SteamWrap_SetStatInt", 2);
@@ -127,6 +140,7 @@ class Steam
 			ugc = new UGC(appId, customTrace);
 			controllers = new Controller(customTrace);
 			cloud = new Cloud(appId, customTrace);
+			workshop = new Workshop(appId, customTrace);
 		}
 		else {
 			customTrace("Steam failed to activate");
@@ -239,6 +253,12 @@ class Steam
 		var val = SteamWrap_GetStat(id);
 		report("getStat", [id], val != 0);
 		return val;
+	}
+	
+	public static function getSteamID():String {
+		if (!active)
+			return "0";
+		return SteamWrap_GetSteamID();
 	}
 	
 	public static function indicateAchievementProgress(id:String, curProgress:Int, maxProgress:Int):Bool {
@@ -426,6 +446,10 @@ class Steam
 		
 		customTrace("[STEAM] " + type + (success ? " SUCCESS" : " FAIL") + " (" + data + ")");
 		
+		if(type != "" && type != null && type != "UserStatsStored"){
+			trace("***steamWrap_onEvent(" + type+" , " + success + " , " + data + ")");
+		}
+		
 		switch (type) {
 			case "UserStatsReceived":
 				haveReceivedUserStats = success;
@@ -483,6 +507,33 @@ class Steam
 				if (whenRemoteStorageFileShared != null) {
 					whenRemoteStorageFileShared(success, data);
 				}
+			case "UserSharedWorkshopFilesEnumerated":
+				trace("BINGO BOINGO");
+				if (whenUserSharedWorkshopFilesEnumerated != null) {
+					var result = EnumerateUserPublishedFilesResult.fromString(data);
+					whenUserSharedWorkshopFilesEnumerated(success, result);
+				}
+			case "PublishedWorkshopFilesEnumerated":
+				if (whenPublishedWorkshopFilesEnumerated != null) {
+					var result = EnumerateWorkshopFilesResult.fromString(data);
+					whenPublishedWorkshopFilesEnumerated(success, result);
+				}
+			case "UserSubscribedFilesEnumerated":
+				if (whenUserSubscribedFilesEnumerated != null) {
+					var result = EnumerateUserSubscribedFilesResult.fromString(data);
+					whenUserSubscribedFilesEnumerated(success, result);
+				}
+			case "UserPublishedFilesEnumerated":
+				if (whenUserPublishedFilesEnumerated != null) {
+					var result = EnumerateUserPublishedFilesResult.fromString(data);
+					whenUserPublishedFilesEnumerated(success, result);
+				}
+			case "UGCDownloaded":
+				if (whenUGCDownloaded != null) {
+					var result = DownloadUGCResult.fromString(data);
+					whenUGCDownloaded(success, result);
+				}
+			
 		}
 	}
 	
@@ -501,6 +552,7 @@ class Steam
 	private static var SteamWrap_GetAchievementDisplayAttribute:String->String->String;
 	private static var SteamWrap_GetNumAchievements:Void->Int;
 	private static var SteamWrap_GetAchievementName:Int->String;
+	private static var SteamWrap_GetSteamID:Void->String;
 	private static var SteamWrap_ClearAchievement:Dynamic;
 	private static var SteamWrap_IndicateAchievementProgress:Dynamic;
 	private static var SteamWrap_StoreStats:Dynamic;
@@ -541,5 +593,249 @@ class LeaderboardScore {
 			return new LeaderboardScore(tokens[0], Std.parseInt(tokens[1]), Std.parseInt(tokens[2]), Std.parseInt(tokens[3]));
 		else
 			return null;
+	}
+}
+
+class EnumerateUserSubscribedFilesResult extends EnumerateUserPublishedFilesResult
+{
+	public var timeSubscribed:Array<Int>;
+	
+	public function new(Result:EResult=1, ResultsReturned:Int=0, TotalResults:Int=0, PublishedFileIds:Array<String>=null, TimeSubscribed:Array<Int>=null)
+	{
+		super(Result, ResultsReturned, TotalResults, PublishedFileIds);
+		timeSubscribed = TimeSubscribed;
+	}
+	
+	public static function fromString(str:String):EnumerateUserSubscribedFilesResult
+	{
+		var returnObject = new EnumerateUserSubscribedFilesResult();
+		returnObject = cast EnumerateUserPublishedFilesResult.fromString(str, returnObject);
+		
+		var timeSubscribed:Array<Int> = [];
+		
+		var arr = str.split(",");
+		var currField = "";
+		for (str in arr){
+			
+			if (str.indexOf(":") == -1){
+				
+				currField = "";
+				var nameValue = str.split(":");
+				
+				if (nameValue[0] == "timeSubscribed"){
+					timeSubscribed.push(Std.parseInt(nameValue[1]));
+					currField = "timeSubscribed";
+				}
+				
+			}
+			else
+			{
+				if (currField == "timeSubscribed"){
+					timeSubscribed.push(Std.parseInt(str));
+				}
+			}
+		}
+		
+		returnObject.timeSubscribed = timeSubscribed;
+		return returnObject;
+	}
+	
+	public override function toString():String
+	{
+		return "EnumerateUserSubscribedFilesResult{result:" + result + ",resultsReturned:" + resultsReturned + ",totalResults:" + totalResults + ",publishedFileIds:" + publishedFileIds + "timeSubscribed:" + timeSubscribed + "}";
+	}
+}
+
+class EnumerateWorkshopFilesResult extends EnumerateUserPublishedFilesResult
+{
+	public var score:Array<Float>;
+	public var appID:Int;
+	public var startIndex:Int;
+	
+	public function new(Result:EResult=1, ResultsReturned:Int=0, TotalResults:Int=0, PublishedFileIds:Array<String>=null, Score:Array<Float>=null, AppID:Int=0, StartIndex:Int=0)
+	{
+		super(Result, ResultsReturned, TotalResults, PublishedFileIds);
+		score = Score;
+		appID = AppID;
+		startIndex = StartIndex;
+	}
+	
+	public static function fromString(str:String):EnumerateWorkshopFilesResult
+	{
+		var returnObject = new EnumerateWorkshopFilesResult();
+		EnumerateUserPublishedFilesResult.fromString(str, returnObject);
+		
+		var appID:Int = 0;
+		var startIndex:Int = 0;
+		
+		var arr = str.split(",");
+		var currField = "";
+		for (str in arr){
+			
+			if (str.indexOf(":") != -1)
+			{
+				var nameValue = str.split(":");
+				switch(nameValue[0]) {
+					case "appID":       appID = Std.parseInt(nameValue[1]);
+					case "startIndex":  startIndex = Std.parseInt(nameValue[1]);
+					default: //do nothing
+				}
+			}
+			
+		}
+		
+		returnObject.appID = appID;
+		returnObject.startIndex = startIndex;
+		
+		return returnObject;
+	}
+	
+	public override function toString():String
+	{
+		return "EnumerateWorkshopFilesResult{result:" + result + ",resultsReturned:" + resultsReturned + ",totalResults:" + totalResults + ",appID:" + appID + ",startIndex:" + startIndex + ",publishedFileIds:" + publishedFileIds + "}";
+	}
+}
+
+class EnumerateUserPublishedFilesResult
+{
+	public var result:EResult;
+	public var resultsReturned:Int;
+	public var totalResults:Int;
+	public var publishedFileIds:Array<String>;
+	
+	public function new(Result:EResult=Fail, ResultsReturned:Int=0, TotalResults:Int=0, PublishedFileIds:Array<String>=null)
+	{
+		result = Result;
+		resultsReturned = ResultsReturned;
+		totalResults = TotalResults;
+		publishedFileIds = PublishedFileIds;
+	}
+	
+	public static function fromString(str:String, ?resultObject:EnumerateUserPublishedFilesResult):EnumerateUserPublishedFilesResult
+	{
+		trace("fromString(" + str + ")");
+		var result:Int = EResult.Fail;
+		var resultsReturned:Int = 0;
+		var totalResults:Int = 0;
+		var publishedFileIds:Array<String> = [];
+		
+		var arr = str.split(",");
+		var currField = "";
+		for (str in arr){
+			
+			if (str.indexOf(":") != -1)
+			{
+				currField = "";
+				var nameValue = str.split(":");
+				switch(nameValue[0]){
+					case "result":           result = Std.parseInt(nameValue[1]);
+					case "resultsReturned":  resultsReturned = Std.parseInt(nameValue[1]);
+					case "totalResults":     totalResults = Std.parseInt(nameValue[1]);
+					case "publishedFileIds": publishedFileIds.push(nameValue[1]);
+						                     currField = "publishedFileIds";
+				}
+			}
+			else
+			{
+				if (currField == "publishedFileIds")
+				{
+					publishedFileIds.push(str);
+				}
+			}
+		}
+		
+		if (resultObject == null)
+		{
+			resultObject = new EnumerateUserPublishedFilesResult();
+		}
+		
+		resultObject.result = cast result;
+		resultObject.resultsReturned = resultsReturned;
+		resultObject.totalResults = totalResults;
+		resultObject.publishedFileIds = publishedFileIds;
+		
+		return resultObject;
+	}
+	
+	public function toString():String
+	{
+		return "EnumerateUserPublishedFilesResult{result:" + result + ",resultsReturned:" + resultsReturned + ",totalResults:" + totalResults + ",publishedFileIds:" + publishedFileIds+"}";
+	}
+}
+
+class DownloadUGCResult
+{
+	public var result:EResult;
+	public var fileHandle:String;
+	public var appID:Int;
+	public var sizeInBytes:Int;
+	public var fileName:String;
+	public var steamIDOwner:String;
+	
+	public function new(Result:EResult = Fail, FileHandle:String = "", AppID:Int = 0, SizeInBytes:Int = 0, FileName:String = "", SteamIDOwner:String = "")
+	{
+		result = Result;
+		fileHandle = FileHandle;
+		appID = AppID;
+		sizeInBytes = SizeInBytes;
+		fileName = FileName;
+		steamIDOwner = SteamIDOwner;
+	}
+	
+	public static function fromString(str:String):DownloadUGCResult
+	{
+		var result = Fail;
+		var fileHandle = "";
+		var appID = 0;
+		var sizeInBytes = 0;
+		var fileName = "";
+		var steamIDOwner = "";
+		
+		var arr = str.split(",");
+		for (str in arr){
+			if (str.indexOf(":") != -1)
+			{
+				var nameValue = str.split(":");
+				switch(nameValue[0]){
+					case "result":       result = Std.parseInt(nameValue[1]);
+					case "fileHandle":   fileHandle = nameValue[1];
+					case "appID":        appID = Std.parseInt(nameValue[1]);
+					case "sizeInBytes":  sizeInBytes = Std.parseInt(nameValue[1]);
+					case "fileName":     fileName = nameValue[1];
+					case "steamIDOwner": steamIDOwner = nameValue[1];
+				}
+			}
+		}
+		
+		return new DownloadUGCResult(result, fileHandle, appID, sizeInBytes, fileName, steamIDOwner);
+	}
+}
+
+@:enum abstract EResult(Int) from Int to Int
+{
+	var Ok = 0;
+	var Fail = 1;
+	var AlreadyRegistered= 2;
+	var TimeOut = 3;
+	
+	public inline function fromInt(i:Int)
+	{
+		if (i < 0)
+		{
+			this = Fail;
+		}
+		else if (i > 3)
+		{
+			this = Fail;
+		}
+		else
+		{
+			this = i;
+		}
+	}
+	
+	public inline function toInt():Int
+	{
+		return cast this;
 	}
 }

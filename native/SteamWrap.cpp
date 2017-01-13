@@ -32,6 +32,10 @@ static const char* kEventTypeUGCLegalAgreement = "UGCLegalAgreementStatus";
 static const char* kEventTypeUGCItemCreated = "UGCItemCreated";
 static const char* kEventTypeOnItemUpdateSubmitted = "UGCItemUpdateSubmitted";
 static const char* kEventTypeOnFileShared = "RemoteStorageFileShared";
+static const char* kEventTypeOnEnumerateUserSharedWorkshopFiles = "UserSharedWorkshopFilesEnumerated";
+static const char* kEventTypeOnEnumerateUserPublishedFiles = "UserPublishedFilesEnumerated";
+static const char* kEventTypeOnEnumerateUserSubscribedFiles = "UserSubscribedFilesEnumerated";
+static const char* kEventTypeOnUGCDownload = "UGCDownloaded";
 
 //A simple data structure that holds on to the native 64-bit handles and maps them to regular ints.
 //This is because it is cumbersome to pass back 64-bit values over CFFI, and strictly speaking, the haxe 
@@ -99,6 +103,7 @@ class steamHandleMap
 
 static steamHandleMap mapControllers;
 static ControllerAnalogActionData_t analogActionData;
+static ControllerMotionData_t motionData;
 
 struct Event
 {
@@ -180,6 +185,22 @@ public:
 	void SubmitUGCItemUpdate(UGCUpdateHandle_t handle, const char *pchChangeNote);
 	void OnItemUpdateSubmitted( SubmitItemUpdateResult_t *pResult, bool bIOFailure);
 	CCallResult<CallbackHandler, SubmitItemUpdateResult_t> m_callResultSubmitUGCItemUpdate;
+	
+	void EnumerateUserSharedWorkshopFiles( CSteamID steamId, uint32 unStartIndex, SteamParamStringArray_t *pRequiredTags, SteamParamStringArray_t *pExcludedTags );
+	void OnEnumerateUserSharedWorkshopFiles( RemoteStorageEnumerateUserPublishedFilesResult_t * pResult, bool bIOFailure);
+	CCallResult<CallbackHandler, RemoteStorageEnumerateUserPublishedFilesResult_t > m_callResultEnumerateUserSharedWorkshopFiles;
+	
+	void EnumerateUserSubscribedFiles ( uint32 unStartIndex );
+	void OnEnumerateUserSubscribedFiles ( RemoteStorageEnumerateUserSubscribedFilesResult_t * pResult, bool bIOFailure);
+	CCallResult<CallbackHandler, RemoteStorageEnumerateUserSubscribedFilesResult_t > m_callResultEnumerateUserSubscribedFiles;
+	
+	void EnumerateUserPublishedFiles ( uint32 unStartIndex );
+	void OnEnumerateUserPublishedFiles ( RemoteStorageEnumerateUserPublishedFilesResult_t * pResult, bool bIOFailure);
+	CCallResult<CallbackHandler, RemoteStorageEnumerateUserPublishedFilesResult_t > m_callResultEnumerateUserPublishedFiles;
+	
+	void UGCDownload ( UGCHandle_t hContent, uint32 unPriority );
+	void OnUGCDownload ( RemoteStorageDownloadUGCResult_t * pResult, bool bIOFailure);
+	CCallResult<CallbackHandler, RemoteStorageDownloadUGCResult_t  > m_callResultUGCDownload;
 	
 	void FileShare(const char* fileName);
 	void OnFileShared( RemoteStorageFileShareResult_t *pResult, bool bIOFailure);
@@ -425,6 +446,155 @@ void CallbackHandler::OnGlobalStatsReceived(GlobalStatsReceived_t* pResult, bool
 	}
 }
 
+void CallbackHandler::EnumerateUserPublishedFiles( uint32 unStartIndex )
+{
+	SteamAPICall_t hSteamAPICall = SteamRemoteStorage()->EnumerateUserPublishedFiles(unStartIndex);
+	m_callResultEnumerateUserPublishedFiles.Set(hSteamAPICall, this, &CallbackHandler::OnEnumerateUserPublishedFiles);
+}
+
+void CallbackHandler::OnEnumerateUserPublishedFiles(RemoteStorageEnumerateUserPublishedFilesResult_t* pResult, bool bIOFailure)
+{
+	if (!bIOFailure)
+	{
+		if(pResult->m_eResult == k_EResultOK)
+		{
+			std::ostringstream data;
+			
+			data << "result:";
+			data << pResult->m_eResult;
+			data << ",resultsReturned:";
+			data << pResult->m_nResultsReturned;
+			data << ",totalResults:";
+			data << pResult->m_nTotalResultCount;
+			data << ",publishedFileIds:";
+			
+			for(int32 i = 0; i < pResult->m_nResultsReturned; ++i) {
+				
+				data << pResult->m_rgPublishedFileId[i];
+				if(i != pResult->m_nResultsReturned-1){
+					data << ',';
+				}
+				
+			}
+			
+			SendEvent(Event(kEventTypeOnEnumerateUserPublishedFiles, pResult->m_eResult == k_EResultOK, data.str()));
+			return;
+		}
+	}
+	SendEvent(Event(kEventTypeOnEnumerateUserSharedWorkshopFiles, false));
+}
+
+void CallbackHandler::EnumerateUserSharedWorkshopFiles( CSteamID steamId, uint32 unStartIndex, SteamParamStringArray_t *pRequiredTags, SteamParamStringArray_t *pExcludedTags )
+{
+	SteamAPICall_t hSteamAPICall = SteamRemoteStorage()->EnumerateUserSharedWorkshopFiles(steamId, unStartIndex, pRequiredTags, pExcludedTags);
+	m_callResultEnumerateUserSharedWorkshopFiles.Set(hSteamAPICall, this, &CallbackHandler::OnEnumerateUserSharedWorkshopFiles);
+}
+
+void CallbackHandler::OnEnumerateUserSharedWorkshopFiles(RemoteStorageEnumerateUserPublishedFilesResult_t* pResult, bool bIOFailure)
+{
+	if(pResult->m_eResult == k_EResultOK)
+	{
+		std::ostringstream data;
+		
+		data << "result:";
+		data << pResult->m_eResult;
+		data << ",resultsReturned:";
+		data << pResult->m_nResultsReturned;
+		data << ",totalResults:";
+		data << pResult->m_nTotalResultCount;
+		data << ",publishedFileIds:";
+		
+		for(int32 i = 0; i < pResult->m_nResultsReturned; ++i) {
+			
+			data << pResult->m_rgPublishedFileId[i];
+			if(i != pResult->m_nResultsReturned-1){
+				data << ',';
+			}
+			
+		}
+		
+		SendEvent(Event(kEventTypeOnEnumerateUserSharedWorkshopFiles, pResult->m_eResult == k_EResultOK, data.str()));
+		return;
+	}
+	SendEvent(Event(kEventTypeOnEnumerateUserSharedWorkshopFiles, false));
+}
+
+void CallbackHandler::EnumerateUserSubscribedFiles( uint32 unStartIndex )
+{
+	SteamAPICall_t hSteamAPICall = SteamRemoteStorage()->EnumerateUserSubscribedFiles( unStartIndex );
+	m_callResultEnumerateUserSubscribedFiles.Set(hSteamAPICall, this, &CallbackHandler::OnEnumerateUserSubscribedFiles);
+}
+
+void CallbackHandler::OnEnumerateUserSubscribedFiles(RemoteStorageEnumerateUserSubscribedFilesResult_t* pResult, bool bIOFailure)
+{
+	if(pResult->m_eResult == k_EResultOK)
+	{
+		std::ostringstream data;
+		
+		data << "result:";
+		data << pResult->m_eResult;
+		data << ",resultsReturned:";
+		data << pResult->m_nResultsReturned;
+		data << ",totalResults:";
+		data << pResult->m_nTotalResultCount;
+		data << ",publishedFileIds:";
+		
+		for(int32 i = 0; i < pResult->m_nResultsReturned; ++i) {
+			
+			data << pResult->m_rgPublishedFileId[i];
+			if(i != pResult->m_nResultsReturned-1){
+				data << ',';
+			}
+			
+		}
+		
+		data << ",timeSubscribed:";
+		
+		for(int32 i = 0; i < pResult->m_nResultsReturned; ++i) {
+			
+			data << pResult->m_rgRTimeSubscribed[i];
+			if(i != pResult->m_nResultsReturned-1){
+				data << ',';
+			}
+			
+		}
+		
+		SendEvent(Event(kEventTypeOnEnumerateUserSubscribedFiles, pResult->m_eResult == k_EResultOK, data.str()));
+		return;
+	}
+	SendEvent(Event(kEventTypeOnEnumerateUserSubscribedFiles, false));
+}
+
+void CallbackHandler::UGCDownload( UGCHandle_t hContent, uint32 unPriority )
+{
+	SteamAPICall_t hSteamAPICall = SteamRemoteStorage()->UGCDownload( hContent, unPriority );
+	m_callResultUGCDownload.Set(hSteamAPICall, this, &CallbackHandler::OnUGCDownload);
+}
+
+void CallbackHandler::OnUGCDownload(RemoteStorageDownloadUGCResult_t* pResult, bool bIOFailure)
+{
+	if(pResult->m_eResult == k_EResultOK)
+	{
+		std::ostringstream data;
+		
+		data << "result:";
+		data << pResult->m_eResult;
+		data << "fileHandle:";
+		data << pResult->m_hFile;
+		data << "appID:";
+		data << pResult->m_nAppID;
+		data << "sizeInBytes:";
+		data << pResult->m_nSizeInBytes;
+		data << "fileName:";
+		data << pResult->m_pchFileName;
+		data << "steamIDOwner:";
+		data << pResult->m_ulSteamIDOwner;
+		
+		SendEvent(Event(kEventTypeOnUGCDownload, pResult->m_eResult == k_EResultOK, data.str()));
+		return;
+	}
+	SendEvent(Event(kEventTypeOnUGCDownload, false));
+}
 //-----------------------------------------------------------------------------------------------------------
 static CallbackHandler* s_callbackHandler = NULL;
 
@@ -883,6 +1053,21 @@ value SteamWrap_GetGlobalStat(value name)
 DEFINE_PRIM(SteamWrap_GetGlobalStat, 1);
 
 //-----------------------------------------------------------------------------------------------------------
+value SteamWrap_GetSteamID()
+{
+	if(!CheckInit())
+		return alloc_string("0");
+	
+	CSteamID userId = SteamUser()->GetSteamID();
+	
+	std::ostringstream returnData;
+	returnData << userId.ConvertToUint64();
+	
+	return alloc_string(returnData.str().c_str());
+}
+DEFINE_PRIM(SteamWrap_GetSteamID, 0);
+
+//-----------------------------------------------------------------------------------------------------------
 value SteamWrap_RestartAppIfNecessary(value appId)
 {
 	if (!val_is_int(appId))
@@ -933,9 +1118,103 @@ value SteamWrap_GetCurrentGameLanguage()
 }
 DEFINE_PRIM(SteamWrap_GetCurrentGameLanguage, 0);
 
+//-----------------------------------------------------------------------------------------------------------
+
+//STEAM WORKSHOP---------------------------------------------------------------------------------------------
+
+void split(const std::string &s, char delim, std::vector<std::string> &elems) {
+	std::stringstream ss;
+	ss.str(s);
+	std::string item;
+	while (std::getline(ss, item, delim)) {
+		elems.push_back(item);
+	}
+}
+
+SteamParamStringArray_t * getSteamParamStringArray(const char * str)
+{
+	std::string stdStr = str;
+	
+	//NOTE: this will probably fail if the string includes Unicode, but Steam tags probably don't support that?
+	std::vector<std::string> v;
+	split(stdStr, ',', v);
+	
+	SteamParamStringArray_t * params = new SteamParamStringArray_t;
+	
+	int count = v.size();
+	
+	params->m_nNumStrings = (int32) count;
+	params->m_ppStrings = new const char *[count];
+	
+	for(int i = 0; i < count; i++) {
+		params->m_ppStrings[i] = v[i].c_str();
+	}
+	
+	return params;
+}
+
+void deleteSteamParamStringArray(SteamParamStringArray_t * params)
+{
+	for(int i = 0; i < params->m_nNumStrings; i++){
+		delete params->m_ppStrings[i];
+	}
+	delete[] params->m_ppStrings;
+	delete params;
+}
+
+void SteamWrap_EnumerateUserSharedWorkshopFiles(const char * steamIDStr, int startIndex, const char * requiredTagsStr, const char * excludedTagsStr)
+{
+	if(!CheckInit()) return;
+	
+	//Reconstruct the steamID from the string representation
+	uint64 u64SteamID = strtoll(steamIDStr, NULL, 10);
+	CSteamID steamID = u64SteamID;
+	
+	uint32 unStartIndex = (uint32) startIndex;
+	
+	//Construct the string arrays from the comma-delimited strings
+	SteamParamStringArray_t * requiredTags = getSteamParamStringArray(requiredTagsStr);
+	SteamParamStringArray_t * excludedTags = getSteamParamStringArray(excludedTagsStr);
+	
+	//make the actual call
+	s_callbackHandler->EnumerateUserSharedWorkshopFiles(steamID, startIndex, requiredTags, excludedTags);
+	
+	//clean up requiredTags & excludedTags:
+	deleteSteamParamStringArray(requiredTags);
+	deleteSteamParamStringArray(excludedTags);
+}
+DEFINE_PRIME4v(SteamWrap_EnumerateUserSharedWorkshopFiles);
+
+void SteamWrap_EnumerateUserPublishedFiles(int startIndex)
+{
+	if(!CheckInit()) return;
+	uint32 unStartIndex = (uint32) startIndex;
+	s_callbackHandler->EnumerateUserPublishedFiles(unStartIndex);
+}
+DEFINE_PRIME1v(SteamWrap_EnumerateUserPublishedFiles);
+
+void SteamWrap_EnumerateUserSubscribedFiles(int startIndex)
+{
+	if(!CheckInit());
+	uint32 unStartIndex = (uint32) startIndex;
+	s_callbackHandler->EnumerateUserSubscribedFiles(unStartIndex);
+}
+DEFINE_PRIME1v(SteamWrap_EnumerateUserSubscribedFiles);
+
+void SteamWrap_UGCDownload(const char * handle, int priority)
+{
+	if(!CheckInit());
+	
+	uint64 u64Handle = strtoull(handle, NULL, 0);
+	uint32 u32Priority = (uint32) priority;
+	
+	s_callbackHandler->UGCDownload(u64Handle, u32Priority);
+}
+DEFINE_PRIME2v(SteamWrap_UGCDownload);
+
+//-----------------------------------------------------------------------------------------------------------
 
 //STEAM CLOUD------------------------------------------------------------------------------------------------
-
 
 //-----------------------------------------------------------------------------------------------------------
 int SteamWrap_GetFileCount(int dummy)
@@ -1047,7 +1326,6 @@ DEFINE_PRIM(SteamWrap_GetQuota,0);
 //-----------------------------------------------------------------------------------------------------------
 
 //STEAM CONTROLLER-------------------------------------------------------------------------------------------
-
 
 //-----------------------------------------------------------------------------------------------------------
 value SteamWrap_InitControllers()
@@ -1314,6 +1592,48 @@ value SteamWrap_GetAnalogActionOrigins(value controllerHandle, value actionSetHa
 DEFINE_PRIM(SteamWrap_GetAnalogActionOrigins,3);
 
 //-----------------------------------------------------------------------------------------------------------
+value SteamWrap_GetGlyphForActionOrigin(value origin)
+{
+	if (!val_is_int(origin) || !CheckInit())
+	{
+		return alloc_string("none");
+	}
+	
+	int iOrigin = val_int(origin);
+	if (iOrigin >= k_EControllerActionOrigin_Count)
+	{
+		return alloc_string("none");
+	}
+	
+	EControllerActionOrigin eOrigin = static_cast<EControllerActionOrigin>(iOrigin);
+	
+	const char * result = SteamController()->GetGlyphForActionOrigin(eOrigin);
+	return alloc_string(result);
+}
+DEFINE_PRIM(SteamWrap_GetGlyphForActionOrigin,1);
+
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_GetStringForActionOrigin(value origin)
+{
+	if (!val_is_int(origin) || !CheckInit())
+	{
+		return alloc_string("unknown");
+	}
+	
+	int iOrigin = val_int(origin);
+	if (iOrigin >= k_EControllerActionOrigin_Count)
+	{
+		return alloc_string("unknown");
+	}
+	
+	EControllerActionOrigin eOrigin = static_cast<EControllerActionOrigin>(iOrigin);
+	
+	const char * result = SteamController()->GetStringForActionOrigin(eOrigin);
+	return alloc_string(result);
+}
+DEFINE_PRIM(SteamWrap_GetStringForActionOrigin,1);
+
+//-----------------------------------------------------------------------------------------------------------
 int SteamWrap_ActivateActionSet(int controllerHandle, int actionSetHandle)
 {
 	ControllerHandle_t c_handle = controllerHandle != -1 ? mapControllers.get(controllerHandle) : STEAM_CONTROLLER_HANDLE_ALL_CONTROLLERS;
@@ -1369,6 +1689,107 @@ void SteamWrap_TriggerRepeatedHapticPulse(int controllerHandle, int targetPad, i
 	SteamController()->TriggerRepeatedHapticPulse(c_handle, eTargetPad, usDurationMicroSec, usOffMicroSec, unRepeat, nFlags);
 }
 DEFINE_PRIME6v(SteamWrap_TriggerRepeatedHapticPulse);
+
+void SteamWrap_TriggerVibration(int controllerHandle, int leftSpeed, int rightSpeed)
+{
+	ControllerHandle_t c_handle = controllerHandle != -1 ? mapControllers.get(controllerHandle) : STEAM_CONTROLLER_HANDLE_ALL_CONTROLLERS;
+	SteamController()->TriggerVibration(c_handle, (unsigned short)leftSpeed, (unsigned short)rightSpeed);
+}
+DEFINE_PRIME3v(SteamWrap_TriggerVibration);
+
+void SteamWrap_SetLEDColor(int controllerHandle, int r, int g, int b, int flags)
+{
+	ControllerHandle_t c_handle = controllerHandle != -1 ? mapControllers.get(controllerHandle) : STEAM_CONTROLLER_HANDLE_ALL_CONTROLLERS;
+	SteamController()->SetLEDColor(c_handle, (uint8)r, (uint8)g, (uint8)b, (unsigned int) flags);
+}
+DEFINE_PRIME5v(SteamWrap_SetLEDColor);
+
+//-----------------------------------------------------------------------------------------------------------
+//stashes the requested motion data in local state
+//you need to immediately call _rotQuatX/Y/Z/W, _posAccelX/Y/Z, _rotVelX/Y/Z to get the rest
+
+void SteamWrap_GetMotionData(int controllerHandle)
+{
+	ControllerHandle_t c_handle = controllerHandle != -1 ? mapControllers.get(controllerHandle) : STEAM_CONTROLLER_HANDLE_ALL_CONTROLLERS;
+	motionData = SteamController()->GetMotionData(c_handle);
+}
+DEFINE_PRIME1v(SteamWrap_GetMotionData);
+
+int SteamWrap_GetMotionData_rotQuatX(int dummy)
+{
+	return motionData.rotQuatX;
+}
+DEFINE_PRIME1(SteamWrap_GetMotionData_rotQuatX);
+
+int SteamWrap_GetMotionData_rotQuatY(int dummy)
+{
+	return motionData.rotQuatY;
+}
+DEFINE_PRIME1(SteamWrap_GetMotionData_rotQuatY);
+
+int SteamWrap_GetMotionData_rotQuatZ(int dummy)
+{
+	return motionData.rotQuatZ;
+}
+DEFINE_PRIME1(SteamWrap_GetMotionData_rotQuatZ);
+
+int SteamWrap_GetMotionData_rotQuatW(int dummy)
+{
+	return motionData.rotQuatW;
+}
+DEFINE_PRIME1(SteamWrap_GetMotionData_rotQuatW);
+
+int SteamWrap_GetMotionData_posAccelX(int dummy)
+{
+	return motionData.posAccelX;
+}
+DEFINE_PRIME1(SteamWrap_GetMotionData_posAccelX);
+
+int SteamWrap_GetMotionData_posAccelY(int dummy)
+{
+	return motionData.posAccelY;
+}
+DEFINE_PRIME1(SteamWrap_GetMotionData_posAccelY);
+
+int SteamWrap_GetMotionData_posAccelZ(int dummy)
+{
+	return motionData.posAccelZ;
+}
+DEFINE_PRIME1(SteamWrap_GetMotionData_posAccelZ);
+
+int SteamWrap_GetMotionData_rotVelX(int dummy)
+{
+	return motionData.rotVelX;
+}
+DEFINE_PRIME1(SteamWrap_GetMotionData_rotVelX);
+
+int SteamWrap_GetMotionData_rotVelY(int dummy)
+{
+	return motionData.rotVelY;
+}
+DEFINE_PRIME1(SteamWrap_GetMotionData_rotVelY);
+
+int SteamWrap_GetMotionData_rotVelZ(int dummy)
+{
+	return motionData.rotVelZ;
+}
+DEFINE_PRIME1(SteamWrap_GetMotionData_rotVelZ);
+
+int SteamWrap_ShowDigitalActionOrigins(int controllerHandle, int digitalActionHandle, float scale, float xPosition, float yPosition)
+{
+	ControllerHandle_t c_handle = controllerHandle != -1 ? mapControllers.get(controllerHandle) : STEAM_CONTROLLER_HANDLE_ALL_CONTROLLERS;
+	return SteamController()->ShowDigitalActionOrigins(c_handle, digitalActionHandle, scale, xPosition, yPosition);
+}
+DEFINE_PRIME5(SteamWrap_ShowDigitalActionOrigins);
+
+int SteamWrap_ShowAnalogActionOrigins(int controllerHandle, int analogActionHandle, float scale, float xPosition, float yPosition)
+{
+	ControllerHandle_t c_handle = controllerHandle != -1 ? mapControllers.get(controllerHandle) : STEAM_CONTROLLER_HANDLE_ALL_CONTROLLERS;
+	return SteamController()->ShowAnalogActionOrigins(c_handle, analogActionHandle, scale, xPosition, yPosition);
+}
+DEFINE_PRIME5(SteamWrap_ShowAnalogActionOrigins);
+
+
 
 //---getters for constants----------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------------
