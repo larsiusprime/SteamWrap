@@ -14,6 +14,23 @@
 
 #include <steam/steam_api.h>
 
+//Thanks to Sven Bergström for these two helper functions:
+inline value bytes_to_hx( const unsigned char* bytes, int byteLength )
+{
+	buffer buf = alloc_buffer_len(byteLength);
+	char* dest = buffer_data(buf);
+	memcpy(dest, bytes, byteLength);
+	return buffer_val(buf);
+}
+
+inline value bytes_to_hx( unsigned char* bytes, int byteLength )
+{
+	buffer buf = alloc_buffer_len(byteLength);
+	char* dest = buffer_data(buf);
+	memcpy(dest, bytes, byteLength);
+	return buffer_val(buf);
+}
+
 AutoGCRoot *g_eventHandler = 0;
 
 //-----------------------------------------------------------------------------------------------------------
@@ -36,6 +53,7 @@ static const char* kEventTypeOnEnumerateUserSharedWorkshopFiles = "UserSharedWor
 static const char* kEventTypeOnEnumerateUserPublishedFiles = "UserPublishedFilesEnumerated";
 static const char* kEventTypeOnEnumerateUserSubscribedFiles = "UserSubscribedFilesEnumerated";
 static const char* kEventTypeOnUGCDownload = "UGCDownloaded";
+static const char* kEventTypeOnGetPublishedFileDetails = "PublishedFileDetailsGotten";
 
 //A simple data structure that holds on to the native 64-bit handles and maps them to regular ints.
 //This is because it is cumbersome to pass back 64-bit values over CFFI, and strictly speaking, the haxe 
@@ -201,6 +219,10 @@ public:
 	void UGCDownload ( UGCHandle_t hContent, uint32 unPriority );
 	void OnUGCDownload ( RemoteStorageDownloadUGCResult_t * pResult, bool bIOFailure);
 	CCallResult<CallbackHandler, RemoteStorageDownloadUGCResult_t  > m_callResultUGCDownload;
+	
+	void GetPublishedFileDetails ( PublishedFileId_t unPublishedFileId, uint32 unMaxSecondsOld );
+	void OnGetPublishedFileDetails ( RemoteStorageGetPublishedFileDetailsResult_t * pResult, bool bIOFailure);
+	CCallResult<CallbackHandler, RemoteStorageGetPublishedFileDetailsResult_t > m_callResultGetPublishedFileDetails;
 	
 	void FileShare(const char* fileName);
 	void OnFileShared( RemoteStorageFileShareResult_t *pResult, bool bIOFailure);
@@ -565,6 +587,67 @@ void CallbackHandler::OnEnumerateUserSubscribedFiles(RemoteStorageEnumerateUserS
 	SendEvent(Event(kEventTypeOnEnumerateUserSubscribedFiles, false));
 }
 
+void CallbackHandler::GetPublishedFileDetails( PublishedFileId_t unPublishedFileId, uint32 unMaxSecondsOld )
+{
+	SteamAPICall_t hSteamAPICall = SteamRemoteStorage()->GetPublishedFileDetails( unPublishedFileId, unMaxSecondsOld);
+	m_callResultGetPublishedFileDetails.Set(hSteamAPICall, this, &CallbackHandler::OnGetPublishedFileDetails);
+}
+
+void CallbackHandler::OnGetPublishedFileDetails(RemoteStorageGetPublishedFileDetailsResult_t* pResult, bool bIOFailure)
+{
+	if(pResult->m_eResult == k_EResultOK)
+	{
+		std::ostringstream data;
+		
+		data << "result:";
+		data << pResult->m_eResult;
+		data << ",publishedFileID:";
+		data << pResult->m_nPublishedFileId;
+		data << ",creatorAppID:";
+		data << pResult->m_nCreatorAppID;
+		data << ",consumerAppID:";
+		data << pResult->m_nConsumerAppID;
+		data << ",title:";
+		data << pResult->m_rgchTitle;
+		data << ",description:";
+		data << pResult->m_rgchDescription;
+		data << ",fileHandle:";
+		data << pResult->m_hFile;
+		data << ",previewFileHandle:";
+		data << pResult->m_hPreviewFile;
+		data << ",steamIDOwner:";
+		data << pResult->m_ulSteamIDOwner;
+		data << ",timeCreated:";
+		data << pResult->m_rtimeCreated;
+		data << ",timeUpdated";
+		data << pResult->m_rtimeUpdated;
+		data << ",visibility:";
+		data << pResult->m_eVisibility;
+		data << ",banned:";
+		data << pResult->m_bBanned;
+		data << ",tags:";
+		data << pResult->m_rgchTags;
+		data << ",tagsTruncated:";
+		data << pResult->m_bTagsTruncated;
+		data << ",fileName:";
+		data << pResult->m_pchFileName;
+		data << ",fileSize:";
+		data << pResult->m_nFileSize;
+		data << ",previewFileSize:";
+		data << pResult->m_nPreviewFileSize;
+		data << ",url:";
+		data << pResult->m_rgchURL;
+		data << ",fileType:",
+		data << pResult->m_eFileType;
+		data << ",acceptedForUse:",
+		data << pResult->m_bAcceptedForUse;
+		
+		SendEvent(Event(kEventTypeOnGetPublishedFileDetails, pResult->m_eResult == k_EResultOK, data.str()));
+		return;
+	}
+	SendEvent(Event(kEventTypeOnGetPublishedFileDetails, false));
+}
+
 void CallbackHandler::UGCDownload( UGCHandle_t hContent, uint32 unPriority )
 {
 	SteamAPICall_t hSteamAPICall = SteamRemoteStorage()->UGCDownload( hContent, unPriority );
@@ -579,15 +662,15 @@ void CallbackHandler::OnUGCDownload(RemoteStorageDownloadUGCResult_t* pResult, b
 		
 		data << "result:";
 		data << pResult->m_eResult;
-		data << "fileHandle:";
+		data << ",fileHandle:";
 		data << pResult->m_hFile;
-		data << "appID:";
+		data << ",appID:";
 		data << pResult->m_nAppID;
-		data << "sizeInBytes:";
+		data << ",sizeInBytes:";
 		data << pResult->m_nSizeInBytes;
-		data << "fileName:";
+		data << ",fileName:";
 		data << pResult->m_pchFileName;
-		data << "steamIDOwner:";
+		data << ",steamIDOwner:";
 		data << pResult->m_ulSteamIDOwner;
 		
 		SendEvent(Event(kEventTypeOnUGCDownload, pResult->m_eResult == k_EResultOK, data.str()));
@@ -1162,6 +1245,25 @@ void deleteSteamParamStringArray(SteamParamStringArray_t * params)
 	delete params;
 }
 
+value SteamWrap_GetUGCDownloadProgress(value contentHandle)
+{
+	if (!CheckInit()) return alloc_string("");
+	if (!val_is_string(contentHandle)) return alloc_string("");
+	
+	uint64 u64Handle = strtoll(val_string(contentHandle), NULL, 10);
+	
+	int32 pnBytesDownloaded = 0;
+	int32 pnBytesExpected = 0;
+	
+	SteamRemoteStorage()->GetUGCDownloadProgress(u64Handle, &pnBytesDownloaded, &pnBytesExpected);
+	
+	std::ostringstream data;
+	data << pnBytesDownloaded << "," << pnBytesExpected;
+	
+	return alloc_string(data.str().c_str());
+}
+DEFINE_PRIM(SteamWrap_GetUGCDownloadProgress,1);
+
 void SteamWrap_EnumerateUserSharedWorkshopFiles(const char * steamIDStr, int startIndex, const char * requiredTagsStr, const char * excludedTagsStr)
 {
 	if(!CheckInit()) return;
@@ -1201,6 +1303,17 @@ void SteamWrap_EnumerateUserSubscribedFiles(int startIndex)
 }
 DEFINE_PRIME1v(SteamWrap_EnumerateUserSubscribedFiles);
 
+void SteamWrap_GetPublishedFileDetails(const char * fileId, int maxSecondsOld)
+{
+	if(!CheckInit());
+	
+	uint64 u64FileID = strtoull(fileId, NULL, 0);
+	uint32 u32MaxSecondsOld = maxSecondsOld;
+	
+	s_callbackHandler->GetPublishedFileDetails(u64FileID, u32MaxSecondsOld);
+}
+DEFINE_PRIME2v(SteamWrap_GetPublishedFileDetails);
+
 void SteamWrap_UGCDownload(const char * handle, int priority)
 {
 	if(!CheckInit());
@@ -1211,6 +1324,32 @@ void SteamWrap_UGCDownload(const char * handle, int priority)
 	s_callbackHandler->UGCDownload(u64Handle, u32Priority);
 }
 DEFINE_PRIME2v(SteamWrap_UGCDownload);
+
+value SteamWrap_UGCRead(value handle, value bytesToRead, value offset, value readAction)
+{
+	if(!CheckInit()             ||
+	   !val_is_string(handle)   ||
+	   !val_is_int(bytesToRead) ||
+	   !val_is_int(offset)      ||
+	   !val_is_int(readAction)) return alloc_string("");
+	
+	uint64 u64Handle = strtoull(val_string(handle), NULL, 0);
+	int32 cubDataToRead = (int32) val_int(bytesToRead);
+	uint32 cOffset = (uint32) val_int(offset);
+	EUGCReadAction eAction = (EUGCReadAction) val_int(readAction);
+	
+	if(u64Handle == 0 || cubDataToRead == 0) return alloc_string("");
+	
+	unsigned char *data = (unsigned char *)malloc(cubDataToRead);
+	int result = SteamRemoteStorage()->UGCRead(u64Handle, data, cubDataToRead, cOffset, eAction);
+	
+	value returnValue = bytes_to_hx(data,result);
+	
+	free(data);
+	
+	return returnValue;
+}
+DEFINE_PRIM(SteamWrap_UGCRead,4);
 
 //-----------------------------------------------------------------------------------------------------------
 
