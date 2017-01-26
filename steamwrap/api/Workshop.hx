@@ -5,7 +5,6 @@ import haxe.io.BytesData;
 import steamwrap.api.Steam;
 import steamwrap.helpers.Loader;
 import steamwrap.helpers.MacroHelper;
-import sys.io.File;
 
 /**
  * The Workshop API. Used by API.hx, should never be created manually by the user.
