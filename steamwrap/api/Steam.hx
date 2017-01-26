@@ -1,7 +1,12 @@
 package steamwrap.api;
+
 import cpp.Lib;
 import haxe.Int64;
+import steamwrap.api.Steam.EnumerateWorkshopFilesResult;
+import steamwrap.api.Steam.DownloadUGCResult;
+import steamwrap.api.Steam.GetPublishedFileDetailsResult;
 import steamwrap.helpers.Loader;
+import steamwrap.helpers.Util;
 
 private enum LeaderboardOp
 {
@@ -53,6 +58,11 @@ class Steam
 	 */
 	public static var cloud(default, null):Cloud;
 	
+	/**
+	 * The Steam Workshop API
+	 */
+	public static var workshop(default, null):Workshop;
+	
 	//User-settable callbacks:
 
 	public static var whenGamepadTextInputDismissed:String->Void;
@@ -64,6 +74,12 @@ class Steam
 	public static var whenUGCItemUpdateComplete:Bool->String->Void;
 	
 	public static var whenRemoteStorageFileShared:Bool->String->Void;
+	public static var whenUserSharedWorkshopFilesEnumerated:Bool->EnumerateUserPublishedFilesResult->Void;
+	public static var whenPublishedWorkshopFilesEnumerated:Bool->EnumerateWorkshopFilesResult->Void;
+	public static var whenUserSubscribedFilesEnumerated:Bool->EnumerateUserSubscribedFilesResult->Void;
+	public static var whenUserPublishedFilesEnumerated:Bool->EnumerateUserPublishedFilesResult->Void;
+	public static var whenUGCDownloaded:Bool->DownloadUGCResult->Void;
+	public static var whenPublishedFileDetailsGotten:Bool->GetPublishedFileDetailsResult->Void;
 	
 	/**
 	 * @param appId_	Your Steam APP ID (the numbers on the end of your store page URL - store.steampowered.com/app/XYZ)
@@ -99,6 +115,7 @@ class Steam
 			SteamWrap_GetAchievementDisplayAttribute = cpp.Lib.load("steamwrap", "SteamWrap_GetAchievementDisplayAttribute", 2);
 			SteamWrap_GetNumAchievements = cpp.Lib.load("steamwrap", "SteamWrap_GetNumAchievements", 0);
 			SteamWrap_GetAchievementName = cpp.Lib.load("steamwrap", "SteamWrap_GetAchievementName", 1);
+			SteamWrap_GetSteamID = cpp.Lib.load("steamwrap", "SteamWrap_GetSteamID", 0);
 			SteamWrap_SetStat = cpp.Lib.load("steamwrap", "SteamWrap_SetStat", 2);
 			SteamWrap_SetStatFloat = cpp.Lib.load("steamwrap", "SteamWrap_SetStatFloat", 2);
 			SteamWrap_SetStatInt = cpp.Lib.load("steamwrap", "SteamWrap_SetStatInt", 2);
@@ -127,6 +144,7 @@ class Steam
 			ugc = new UGC(appId, customTrace);
 			controllers = new Controller(customTrace);
 			cloud = new Cloud(appId, customTrace);
+			workshop = new Workshop(appId, customTrace);
 		}
 		else {
 			customTrace("Steam failed to activate");
@@ -239,6 +257,12 @@ class Steam
 		var val = SteamWrap_GetStat(id);
 		report("getStat", [id], val != 0);
 		return val;
+	}
+	
+	public static function getSteamID():String {
+		if (!active)
+			return "0";
+		return SteamWrap_GetSteamID();
 	}
 	
 	public static function indicateAchievementProgress(id:String, curProgress:Int, maxProgress:Int):Bool {
@@ -483,6 +507,37 @@ class Steam
 				if (whenRemoteStorageFileShared != null) {
 					whenRemoteStorageFileShared(success, data);
 				}
+			case "UserSharedWorkshopFilesEnumerated":
+				if (whenUserSharedWorkshopFilesEnumerated != null) {
+					var result = EnumerateUserPublishedFilesResult.fromString(data);
+					whenUserSharedWorkshopFilesEnumerated(success, result);
+				}
+			case "PublishedWorkshopFilesEnumerated":
+				if (whenPublishedWorkshopFilesEnumerated != null) {
+					var result = EnumerateWorkshopFilesResult.fromString(data);
+					whenPublishedWorkshopFilesEnumerated(success, result);
+				}
+			case "UserSubscribedFilesEnumerated":
+				if (whenUserSubscribedFilesEnumerated != null) {
+					var result = EnumerateUserSubscribedFilesResult.fromString(data);
+					whenUserSubscribedFilesEnumerated(success, result);
+				}
+			case "UserPublishedFilesEnumerated":
+				if (whenUserPublishedFilesEnumerated != null) {
+					var result = EnumerateUserPublishedFilesResult.fromString(data);
+					whenUserPublishedFilesEnumerated(success, result);
+				}
+			case "UGCDownloaded":
+				if (whenUGCDownloaded != null) {
+					var result = DownloadUGCResult.fromString(data);
+					whenUGCDownloaded(success, result);
+				}
+			case "PublishedFileDetailsGotten":
+				if (whenPublishedFileDetailsGotten != null) {
+					var result = GetPublishedFileDetailsResult.fromString(data);
+					whenPublishedFileDetailsGotten(success, result);
+				}
+			
 		}
 	}
 	
@@ -501,6 +556,7 @@ class Steam
 	private static var SteamWrap_GetAchievementDisplayAttribute:String->String->String;
 	private static var SteamWrap_GetNumAchievements:Void->Int;
 	private static var SteamWrap_GetAchievementName:Int->String;
+	private static var SteamWrap_GetSteamID:Void->String;
 	private static var SteamWrap_ClearAchievement:Dynamic;
 	private static var SteamWrap_IndicateAchievementProgress:Dynamic;
 	private static var SteamWrap_StoreStats:Dynamic;
@@ -541,5 +597,598 @@ class LeaderboardScore {
 			return new LeaderboardScore(tokens[0], Std.parseInt(tokens[1]), Std.parseInt(tokens[2]), Std.parseInt(tokens[3]));
 		else
 			return null;
+	}
+}
+
+class EnumerateUserSubscribedFilesResult extends EnumerateUserPublishedFilesResult
+{
+	public var timeSubscribed:Array<Int>;
+	
+	public function new(Result:EResult=1, ResultsReturned:Int=0, TotalResults:Int=0, PublishedFileIds:Array<String>=null, TimeSubscribed:Array<Int>=null)
+	{
+		super(Result, ResultsReturned, TotalResults, PublishedFileIds);
+		timeSubscribed = TimeSubscribed;
+	}
+	
+	public static function fromString(str:String):EnumerateUserSubscribedFilesResult
+	{
+		var returnObject = new EnumerateUserSubscribedFilesResult();
+		returnObject = cast EnumerateUserPublishedFilesResult.fromString(str, returnObject);
+		
+		var timeSubscribed:Array<Int> = [];
+		
+		var arr = str.split(",");
+		var currField = "";
+		for (str in arr){
+			
+			if (str.indexOf(":") == -1){
+				
+				currField = "";
+				var nameValue = str.split(":");
+				
+				if (nameValue[0] == "timeSubscribed"){
+					timeSubscribed.push(Std.parseInt(nameValue[1]));
+					currField = "timeSubscribed";
+				}
+				
+			}
+			else
+			{
+				if (currField == "timeSubscribed"){
+					timeSubscribed.push(Std.parseInt(str));
+				}
+			}
+		}
+		
+		returnObject.timeSubscribed = timeSubscribed;
+		return returnObject;
+	}
+	
+	public override function toString():String
+	{
+		return "EnumerateUserSubscribedFilesResult{result:" + result + ",resultsReturned:" + resultsReturned + ",totalResults:" + totalResults + ",publishedFileIds:" + publishedFileIds + "timeSubscribed:" + timeSubscribed + "}";
+	}
+}
+
+class EnumerateWorkshopFilesResult extends EnumerateUserPublishedFilesResult
+{
+	public var score:Array<Float>;
+	public var appID:Int;
+	public var startIndex:Int;
+	
+	public function new(Result:EResult=1, ResultsReturned:Int=0, TotalResults:Int=0, PublishedFileIds:Array<String>=null, Score:Array<Float>=null, AppID:Int=0, StartIndex:Int=0)
+	{
+		super(Result, ResultsReturned, TotalResults, PublishedFileIds);
+		score = Score;
+		appID = AppID;
+		startIndex = StartIndex;
+	}
+	
+	public static function fromString(str:String):EnumerateWorkshopFilesResult
+	{
+		var returnObject = new EnumerateWorkshopFilesResult();
+		EnumerateUserPublishedFilesResult.fromString(str, returnObject);
+		
+		var appID:Int = 0;
+		var startIndex:Int = 0;
+		
+		var arr = str.split(",");
+		var currField = "";
+		for (str in arr){
+			
+			if (str.indexOf(":") != -1)
+			{
+				var nameValue = str.split(":");
+				switch(nameValue[0]) {
+					case "appID":       appID = Std.parseInt(nameValue[1]);
+					case "startIndex":  startIndex = Std.parseInt(nameValue[1]);
+					default: //do nothing
+				}
+			}
+			
+		}
+		
+		returnObject.appID = appID;
+		returnObject.startIndex = startIndex;
+		
+		return returnObject;
+	}
+	
+	public override function toString():String
+	{
+		return "EnumerateWorkshopFilesResult{result:" + result + ",resultsReturned:" + resultsReturned + ",totalResults:" + totalResults + ",appID:" + appID + ",startIndex:" + startIndex + ",publishedFileIds:" + publishedFileIds + "}";
+	}
+}
+
+class EnumerateUserPublishedFilesResult
+{
+	public var result:EResult;
+	public var resultsReturned:Int;
+	public var totalResults:Int;
+	public var publishedFileIds:Array<String>;
+	
+	public function new(Result:EResult=Fail, ResultsReturned:Int=0, TotalResults:Int=0, PublishedFileIds:Array<String>=null)
+	{
+		result = Result;
+		resultsReturned = ResultsReturned;
+		totalResults = TotalResults;
+		publishedFileIds = PublishedFileIds;
+	}
+	
+	public static function fromString(str:String, ?resultObject:EnumerateUserPublishedFilesResult):EnumerateUserPublishedFilesResult
+	{
+		var result:Int = EResult.Fail;
+		var resultsReturned:Int = 0;
+		var totalResults:Int = 0;
+		var publishedFileIds:Array<String> = [];
+		
+		var arr = str.split(",");
+		var currField = "";
+		for (str in arr){
+			
+			if (str.indexOf(":") != -1)
+			{
+				currField = "";
+				var nameValue = str.split(":");
+				switch(nameValue[0]){
+					case "result":           result = Std.parseInt(nameValue[1]);
+					case "resultsReturned":  resultsReturned = Std.parseInt(nameValue[1]);
+					case "totalResults":     totalResults = Std.parseInt(nameValue[1]);
+					case "publishedFileIds": publishedFileIds.push(nameValue[1]);
+						                     currField = "publishedFileIds";
+				}
+			}
+			else
+			{
+				if (currField == "publishedFileIds")
+				{
+					publishedFileIds.push(str);
+				}
+			}
+		}
+		
+		if (resultObject == null)
+		{
+			resultObject = new EnumerateUserPublishedFilesResult();
+		}
+		
+		resultObject.result = cast result;
+		resultObject.resultsReturned = resultsReturned;
+		resultObject.totalResults = totalResults;
+		resultObject.publishedFileIds = publishedFileIds;
+		
+		return resultObject;
+	}
+	
+	public function toString():String
+	{
+		return "EnumerateUserPublishedFilesResult{result:" + result + ",resultsReturned:" + resultsReturned + ",totalResults:" + totalResults + ",publishedFileIds:" + publishedFileIds+"}";
+	}
+}
+
+class DownloadUGCResult
+{
+	public var result:EResult;
+	public var fileHandle:String;
+	public var appID:Int;
+	public var sizeInBytes:Int;
+	public var fileName:String;
+	public var steamIDOwner:String;
+	
+	public function new(Result:EResult = Fail, FileHandle:String = "", AppID:Int = 0, SizeInBytes:Int = 0, FileName:String = "", SteamIDOwner:String = "")
+	{
+		result = Result;
+		fileHandle = FileHandle;
+		appID = AppID;
+		sizeInBytes = SizeInBytes;
+		fileName = FileName;
+		steamIDOwner = SteamIDOwner;
+	}
+	
+	public static function fromString(str:String):DownloadUGCResult
+	{
+		var result = Fail;
+		var fileHandle = "";
+		var appID = 0;
+		var sizeInBytes = 0;
+		var fileName = "";
+		var steamIDOwner = "";
+		
+		var arr = str.split(",");
+		for (str in arr){
+			if (str.indexOf(":") != -1)
+			{
+				var nameValue = str.split(":");
+				switch(nameValue[0]){
+					case "result":       result = Std.parseInt(nameValue[1]);
+					case "fileHandle":   fileHandle = nameValue[1];
+					case "appID":        appID = Std.parseInt(nameValue[1]);
+					case "sizeInBytes":  sizeInBytes = Std.parseInt(nameValue[1]);
+					case "fileName":     fileName = nameValue[1];
+					case "steamIDOwner": steamIDOwner = nameValue[1];
+				}
+			}
+		}
+		
+		return new DownloadUGCResult(result, fileHandle, appID, sizeInBytes, fileName, steamIDOwner);
+	}
+	
+	public function toString():String
+	{
+		return ("{result:" + result + ",fileHandle:" + fileHandle+",appID:" + appID + ",sizeInBytes:" + sizeInBytes + ",fileName:" + fileName+",steamIDOwner:" + steamIDOwner + "}");
+	}
+}
+
+class GetPublishedFileDetailsResult
+{
+	public var result:EResult;
+	public var fileID:String;
+	public var creatorAppID:String;
+	public var consumerAppID:String;
+	public var title:String;
+	public var description:String;
+	public var fileHandle:String;
+	public var previewFileHandle:String;
+	public var steamIDOwner:String;
+	public var timeCreated:Int;
+	public var timeUpdated:Int;
+	public var visibility:EPublishedFileVisibility;
+	public var banned:Bool;
+	public var tags:String;
+	public var tagsTruncated:Bool;
+	public var fileName:String;
+	public var fileSize:Int;
+	public var previewFileSize:Int;
+	public var url:String;
+	public var fileType:EWorkshopFileType;
+	public var acceptedForUse:Bool;
+	
+	public function new(
+		Result:EResult = Fail,
+		FileID:String = "",
+		CreatorAppID:String = "",
+		ConsumerAppID:String = "",
+		Title:String = "",
+		Description:String = "",
+		FileHandle:String = "",
+		PreviewFileHandle:String = "",
+		SteamIDOwner:String = "",
+		TimeCreated:Int = 0,
+		TimeUpdated:Int = 0,
+		Visibility:EPublishedFileVisibility,
+		Banned:Bool = false,
+		Tags:String = "",
+		TagsTruncated:Bool = false,
+		FileName:String = "",
+		FileSize:Int = 0,
+		PreviewFileSize:Int = 0,
+		URL:String = "",
+		FileType:EWorkshopFileType,
+		AcceptedForUse:Bool = false
+	)
+	{
+		result = Result;
+		fileID = FileID;
+		creatorAppID = CreatorAppID;
+		consumerAppID = ConsumerAppID;
+		title = Title;
+		description = Description;
+		fileHandle = FileHandle;
+		previewFileHandle = PreviewFileHandle;
+		steamIDOwner = SteamIDOwner;
+		timeCreated = TimeCreated;
+		timeUpdated = TimeUpdated;
+		visibility = Visibility;
+		banned = Banned;
+		tags = Tags;
+		tagsTruncated = TagsTruncated;
+		fileName = FileName;
+		fileSize = FileSize;
+		previewFileSize = PreviewFileSize;
+		url = URL;
+		fileType = FileType;
+		acceptedForUse = AcceptedForUse;
+	}
+	
+	public static function fromString(str:String):GetPublishedFileDetailsResult
+	{
+		var result:EResult = Fail;
+		var fileID:String = "";
+		var creatorAppID:String = "";
+		var consumerAppID:String = "";
+		var title:String = "";
+		var description:String = "";
+		var fileHandle:String = "";
+		var previewFileHandle:String = "";
+		var steamIDOwner:String = "";
+		var timeCreated:Int = 0;
+		var timeUpdated:Int = 0;
+		var visibility:EPublishedFileVisibility = Private;
+		var banned:Bool = false;
+		var tags:String = "";
+		var tagsTruncated:Bool = false;
+		var fileName:String = "";
+		var fileSize:Int = 0;
+		var previewFileSize:Int = 0;
+		var url:String = "";
+		var fileType:EWorkshopFileType = Community;
+		var acceptedForUse:Bool = false;
+		
+		var arr = str.split(",");
+		for (str in arr){
+			if (str.indexOf(":") != -1)
+			{
+				var nameValue = str.split(":");
+				switch(nameValue[0]){
+					case "result":             result = Std.parseInt(nameValue[1]);
+					case "publishedFileID":    fileID = nameValue[1];
+					case "creatorAppID":       creatorAppID = nameValue[1];
+					case "consumerAppID":      consumerAppID = nameValue[1];
+					case "title":              title = nameValue[1];
+					case "description":        description = nameValue[1];
+					case "fileHandle":         fileHandle = nameValue[1];
+					case "previewFileHandle":  previewFileHandle = nameValue[1];
+					case "steamIDOwner":       steamIDOwner = nameValue[1];
+					case "timeCreated":        timeCreated = Std.parseInt(nameValue[1]);
+					case "timeUpdated":        timeUpdated = Std.parseInt(nameValue[1]);
+					case "visibility":         visibility = Std.parseInt(nameValue[1]);
+					case "banned":             banned = Util.boolify(nameValue[1]);
+					case "tagsTruncated":      tagsTruncated = Util.boolify(nameValue[1]);
+					case "fileName":           fileName = nameValue[1];
+					case "fileSize":           fileSize = Std.parseInt(nameValue[1]);
+					case "url":                url = nameValue[1];
+					case "fileType":           fileType = Std.parseInt(nameValue[1]);
+					case "acceptedForUse":     acceptedForUse = Util.boolify(nameValue[1]);
+				}
+			}
+		}
+		
+		return new GetPublishedFileDetailsResult(
+			result,
+			fileID,
+			creatorAppID,
+			consumerAppID,
+			title,
+			description,
+			fileHandle,
+			previewFileHandle,
+			steamIDOwner,
+			timeCreated,
+			timeUpdated,
+			visibility,
+			banned,
+			tagsTruncated,
+			fileName,
+			fileSize,
+			url,
+			fileType,
+			acceptedForUse
+		);
+	}
+}
+
+@:enum abstract EWorkshopFileType(Int) from Int to Int
+{
+	var Community              =  0;	// normal Workshop item that can be subscribed to
+	var Microtransaction       =  1;	// Workshop item that is meant to be voted on for the purpose of selling in-game
+	var Collection             =  2;	// a collection of Workshop or Greenlight items
+	var Art                    =  3;	// artwork
+	var Video                  =  4;	// external video
+	var Screenshot             =  5;	// screenshot
+	var Game                   =  6;	// Greenlight game entry
+	var Software               =  7;	// Greenlight software entry
+	var Concept                =  8;	// Greenlight concept
+	var WebGuide               =  9;	// Steam web guide
+	var IntegratedGuide        = 10;	// application integrated guide
+	var Merch                  = 11;	// Workshop merchandise meant to be voted on for the purpose of being sold
+	var ControllerBinding      = 12;	// Steam Controller bindings
+	var SteamWorksAccessInvite = 13;	// internal
+	var SteamVideo             = 14;	// Steam video
+	var GameManagedItem        = 15;	// managed completely by the game, not the user, and not shown on the web
+	
+	public inline function fromInt(i:Int)
+	{
+		if (i < 0 || i > 15)
+		{
+			this = Community;
+		}
+		else
+		{
+			this = i;
+		}
+	}
+	
+	public inline function toInt():Int
+	{
+		return cast this;
+	}
+}
+
+@:enum abstract EPublishedFileVisibility(Int) from Int to Int
+{
+	var Public = 0;
+	var FriendsOnly = 1;
+	var Private = 2;
+	
+	public inline function fromInt(i:Int)
+	{
+		if (i < 0 || i > 2)
+		{
+			this = Private;
+		}
+		else
+		{
+			this = i;
+		}
+	}
+	
+	public inline function toInt():Int
+	{
+		return cast this;
+	}
+}
+
+@:enum abstract EResult(Int) from Int to Int
+{
+	var OK  = 1;                            // success
+	var Fail = 2;                           // generic failure 
+	var NoConnection = 3;                   // no/failed network connection
+	//var NoConnectionRetry = 4;            // OBSOLETE - removed
+	var InvalidPassword = 5;                // password/ticket is invalid
+	var LoggedInElsewhere = 6;              // same user logged in elsewhere
+	var InvalidProtocolVer = 7;             // protocol version is incorrect
+	var InvalidParam = 8;                   // a parameter is incorrect
+	var FileNotFound = 9;                   // file was not found
+	var Busy = 10;                          // called method busy - action not taken
+	var InvalidState = 11;                  // called object was in an invalid state
+	var InvalidName = 12;                   // name is invalid
+	var InvalidEmail = 13;                  // email is invalid
+	var DuplicateName = 14;                 // name is not unique
+	var AccessDenied = 15;                  // access is denied
+	var Timeout = 16;                       // operation timed out
+	var Banned = 17;                        // VAC2 banned
+	var AccountNotFound = 18;               // account not found
+	var InvalidSteamID = 19;                // steamID is invalid
+	var ServiceUnavailable = 20;            // The requested service is currently unavailable
+	var NotLoggedOn = 21;                   // The user is not logged on
+	var Pending = 22;                       // Request is pending (may be in process; or waiting on third party)
+	var EncryptionFailure = 23;             // Encryption or Decryption failed
+	var InsufficientPrivilege = 24;         // Insufficient privilege
+	var LimitExceeded = 25;                 // Too much of a good thing
+	var Revoked = 26;                       // Access has been revoked (used for revoked guest passes)
+	var Expired = 27;                       // License/Guest pass the user is trying to access is expired
+	var AlreadyRedeemed = 28;               // Guest pass has already been redeemed by account; cannot be acked again
+	var DuplicateRequest = 29;              // The request is a duplicate and the action has already occurred in the past; ignored this time
+	var AlreadyOwned = 30;                  // All the games in this guest pass redemption request are already owned by the user
+	var IPNotFound = 31;                    // IP address not found
+	var PersistFailed = 32;                 // failed to write change to the data store
+	var LockingFailed = 33;                 // failed to acquire access lock for this operation
+	var LogonSessionReplaced = 34;
+	var ConnectFailed = 35;
+	var HandshakeFailed = 36;
+	var IOFailure = 37;
+	var RemoteDisconnect = 38;
+	var ShoppingCartNotFound = 39;          // failed to find the shopping cart requested
+	var Blocked = 40;                       // a user didn't allow it
+	var Ignored = 41;                       // target is ignoring sender
+	var NoMatch = 42;                       // nothing matching the request found
+	var AccountDisabled = 43;
+	var ServiceReadOnly = 44;               // this service is not accepting content changes right now
+	var AccountNotFeatured = 45;            // account doesn't have value; so this feature isn't available
+	var AdministratorOK = 46;               // allowed to take this action; but only because requester is admin
+	var ContentVersion = 47;                // A Version mismatch in content transmitted within the Steam protocol.
+	var TryAnotherCM = 48;                  // The current CM can't service the user making a request; user should try another.
+	var PasswordRequiredToKickSession = 49; // You are already logged in elsewhere; this cached credential login has failed.
+	var AlreadyLoggedInElsewhere = 50;      // You are already logged in elsewhere; you must wait
+	var Suspended = 51;                     // Long running operation (content download) suspended/paused
+	var Cancelled = 52;                     // Operation canceled (typically by user: content download)
+	var DataCorruption = 53;                // Operation canceled because data is ill formed or unrecoverable
+	var DiskFull = 54;                      // Operation canceled - not enough disk space.
+	var RemoteCallFailed = 55;              // an remote call or IPC call failed
+	var PasswordUnset = 56;                 // Password could not be verified as it's unset server side
+	var ExternalAccountUnlinked = 57;       // External account (PSN; Facebook...) is not linked to a Steam account
+	var PSNTicketInvalid = 58;              // PSN ticket was invalid
+	var ExternalAccountAlreadyLinked = 59;  // External account (PSN; Facebook...) is already linked to some other account; must explicitly request to replace/delete the link first
+	var RemoteFileConflict = 60;            // The sync cannot resume due to a conflict between the local and remote files
+	var IllegalPassword = 61;               // The requested new password is not legal
+	var SameAsPreviousValue = 62;           // new value is the same as the old one ( secret question and answer )
+	var AccountLogonDenied = 63;            // account login denied due to 2nd factor authentication failure
+	var CannotUseOldPassword = 64;          // The requested new password is not legal
+	var InvalidLoginAuthCode = 65;          // account login denied due to auth code invalid
+	var AccountLogonDeniedNoMail = 66;      // account login denied due to 2nd factor auth failure - and no mail has been sent
+	var HardwareNotCapableOfIPT = 67;       // 
+	var IPTInitError = 68;                  // 
+	var ParentalControlRestricted = 69;     // operation failed due to parental control restrictions for current user
+	var FacebookQueryError = 70;            // Facebook query returned an error
+	var ExpiredLoginAuthCode = 71;          // account login denied due to auth code expired
+	var IPLoginRestrictionFailed = 72;
+	var AccountLockedDown = 73;
+	var AccountLogonDeniedVerifiedEmailRequired = 74;
+	var NoMatchingURL = 75;
+	var BadResponse = 76;                   // parse failure; missing field; etc.
+	var RequirePasswordReEntry = 77;        // The user cannot complete the action until they re-enter their password
+	var ValueOutOfRange = 78;               // the value entered is outside the acceptable range
+	var UnexpectedError = 79;               // something happened that we didn't expect to ever happen
+	var Disabled = 80;                      // The requested service has been configured to be unavailable
+	var InvalidCEGSubmission = 81;          // The set of files submitted to the CEG server are not valid !
+	var RestrictedDevice = 82;              // The device being used is not allowed to perform this action
+	var RegionLocked = 83;                  // The action could not be complete because it is region restricted
+	var RateLimitExceeded = 84;             // Temporary rate limit exceeded; try again later; different from var LimitExceeded which may be permanent
+	var AccountLoginDeniedNeedTwoFactor = 85;   // Need two-factor code to login
+	var ItemDeleted = 86;                   // The thing we're trying to access has been deleted
+	var AccountLoginDeniedThrottle = 87;    // login attempt failed; try to throttle response to possible attacker
+	var TwoFactorCodeMismatch = 88;         // two factor code mismatch
+	var TwoFactorActivationCodeMismatch = 89;   // activation code for two-factor didn't match
+	var AccountAssociatedToMultiplePartners = 90;   // account has been associated with multiple partners
+	var NotModified = 91;                   // data not modified
+	var NoMobileDevice = 92;                // the account does not have a mobile device associated with it
+	var TimeNotSynced = 93;                 // the time presented is out of range or tolerance
+	var SmsCodeFailed = 94;                 // SMS code failure (no match; none pending; etc.)
+	var AccountLimitExceeded = 95;          // Too many accounts access this resource
+	var AccountActivityLimitExceeded = 96;  // Too many changes to this account
+	var PhoneActivityLimitExceeded = 97;    // Too many changes to this phone
+	var RefundToWallet = 98;                // Cannot refund to payment method; must use wallet
+	var EmailSendFailure = 99;              // Cannot send an email
+	var NotSettled = 100;                   // Can't perform operation till payment has settled
+	var NeedCaptcha = 101;                  // Needs to provide a valid captcha
+	var GSLTDenied = 102;                   // a game server login token owned by this token's owner has been banned
+	var GSOwnerDenied = 103;                // game server owner is denied for other reason (account lock; community ban; vac ban; missing phone)
+	var InvalidItemType = 104;              // the type of thing we were requested to act on is invalid
+	var IPBanned = 105;                     // the ip address has been banned from taking this action
+	var GSLTExpired = 106;                  // this token has expired from disuse; can be reset for use
+
+	public inline function fromInt(i:Int)
+	{
+		if (i < 0)
+		{
+			this = Fail;
+		}
+		else if (i > 3)
+		{
+			this = Fail;
+		}
+		else
+		{
+			this = i;
+		}
+	}
+
+	public inline function toInt():Int
+	{
+		return cast this;
+	}
+}
+
+@:enum abstract EUGCReadAction(Int) from Int to Int
+{
+	/**
+	 * Keeps the file handle open unless the last byte is read.  You can use this when reading large files (over 100MB) in sequential chunks.
+	 * If the last byte is read, this will behave the same as Close.  Otherwise, it behaves the same as ContinueReading.
+	 * This value maintains the same behavior as before the EUGCReadAction parameter was introduced.
+	 */
+	var ContinueReadingUntilFinished = 0;
+	
+	/**
+	 * Keeps the file handle open.  Use this when using UGCRead to seek to different parts of the file.
+	 * When you are done seeking around the file, make a final call with k_EUGCRead_Close to close it.
+	 */
+	var ContinueReading = 1;
+	
+	/**
+	 * Frees the file handle.  Use this when you're done reading the content.  
+	 * To read the file from Steam again you will need to call UGCDownload again. 
+	 */
+	var Close = 2;
+	
+	public inline function fromInt(i:Int)
+	{
+		if (i < 0) i = 0;
+		if (i > 2) i = 2;
+		this = i;
+	}
+	
+	public inline function toInt():Int
+	{
+		return cast this;
 	}
 }

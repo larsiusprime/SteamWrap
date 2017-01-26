@@ -76,7 +76,7 @@ class UGC
 	private var SteamWrap_SubmitUGCItemUpdate:Dynamic;
 	
 	//CFFI PRIME calls:
-		//none so far
+	
 	
 	private function new(appId_:Int, CustomTrace:String->Void) {
 		#if sys		//TODO: figure out what targets this will & won't work with and upate this guard
