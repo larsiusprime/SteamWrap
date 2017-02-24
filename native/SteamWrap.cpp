@@ -31,6 +31,71 @@ inline value bytes_to_hx( unsigned char* bytes, int byteLength )
 	return buffer_val(buf);
 }
 
+//just splits a string
+void split(const std::string &s, char delim, std::vector<std::string> &elems) {
+	std::stringstream ss;
+	ss.str(s);
+	std::string item;
+	while (std::getline(ss, item, delim)) {
+		elems.push_back(item);
+	}
+}
+
+//generates a parameter string array from comma-delimeted-values
+SteamParamStringArray_t * getSteamParamStringArray(const char * str)
+{
+	std::string stdStr = str;
+	
+	//NOTE: this will probably fail if the string includes Unicode, but Steam tags probably don't support that?
+	std::vector<std::string> v;
+	split(stdStr, ',', v);
+	
+	SteamParamStringArray_t * params = new SteamParamStringArray_t;
+	
+	int count = v.size();
+	
+	params->m_nNumStrings = (int32) count;
+	params->m_ppStrings = new const char *[count];
+	
+	for(int i = 0; i < count; i++) {
+		params->m_ppStrings[i] = v[i].c_str();
+	}
+	
+	return params;
+}
+
+//generates a uint64 array from comma-delimeted-values
+uint64 * getUint64Array(const char * str, uint32 * numElements)
+{
+	std::string stdStr = str;
+	
+	//NOTE: this will probably fail if the string includes Unicode, but Steam tags probably don't support that?
+	std::vector<std::string> v;
+	split(stdStr, ',', v);
+	
+	int count = v.size();
+	
+	uint64 * values = new uint64[count];
+	
+	for(int i = 0; i < count; i++) {
+		values[i] = strtoull(v[i].c_str(), NULL, 0);
+	}
+	
+	*numElements = count;
+	
+	return values;
+}
+
+void deleteSteamParamStringArray(SteamParamStringArray_t * params)
+{
+	for(int i = 0; i < params->m_nNumStrings; i++){
+		delete params->m_ppStrings[i];
+	}
+	delete[] params->m_ppStrings;
+	delete params;
+}
+
+
 AutoGCRoot *g_eventHandler = 0;
 
 //-----------------------------------------------------------------------------------------------------------
@@ -54,6 +119,9 @@ static const char* kEventTypeOnEnumerateUserPublishedFiles = "UserPublishedFiles
 static const char* kEventTypeOnEnumerateUserSubscribedFiles = "UserSubscribedFilesEnumerated";
 static const char* kEventTypeOnUGCDownload = "UGCDownloaded";
 static const char* kEventTypeOnGetPublishedFileDetails = "PublishedFileDetailsGotten";
+static const char* kEventTypeOnDownloadItem = "ItemDownloaded";
+static const char* kEventTypeOnItemInstalled = "ItemInstalled";
+static const char* kEventTypeOnUGCQueryCompleted = "UGCQueryCompleted";
 
 //A simple data structure that holds on to the native 64-bit handles and maps them to regular ints.
 //This is because it is cumbersome to pass back 64-bit values over CFFI, and strictly speaking, the haxe 
@@ -172,14 +240,18 @@ public:
  		m_CallbackUserStatsReceived( this, &CallbackHandler::OnUserStatsReceived ),
  		m_CallbackUserStatsStored( this, &CallbackHandler::OnUserStatsStored ),
  		m_CallbackAchievementStored( this, &CallbackHandler::OnAchievementStored ),
-		m_CallbackGamepadTextInputDismissed( this, &CallbackHandler::OnGamepadTextInputDismissed )
+		m_CallbackGamepadTextInputDismissed( this, &CallbackHandler::OnGamepadTextInputDismissed ),
+		m_CallbackDownloadItemResult( this, &CallbackHandler::OnDownloadItem ),
+		m_CallbackItemInstalled( this, &CallbackHandler::OnItemInstalled )
 	{}
 
 	STEAM_CALLBACK( CallbackHandler, OnUserStatsReceived, UserStatsReceived_t, m_CallbackUserStatsReceived );
 	STEAM_CALLBACK( CallbackHandler, OnUserStatsStored, UserStatsStored_t, m_CallbackUserStatsStored );
 	STEAM_CALLBACK( CallbackHandler, OnAchievementStored, UserAchievementStored_t, m_CallbackAchievementStored );
 	STEAM_CALLBACK( CallbackHandler, OnGamepadTextInputDismissed, GamepadTextInputDismissed_t, m_CallbackGamepadTextInputDismissed );
-
+	STEAM_CALLBACK( CallbackHandler, OnDownloadItem, DownloadItemResult_t, m_CallbackDownloadItemResult );
+	STEAM_CALLBACK( CallbackHandler, OnItemInstalled, ItemInstalled_t, m_CallbackItemInstalled );
+	
 	void FindLeaderboard(const char* name);
 	void OnLeaderboardFound( LeaderboardFindResult_t *pResult, bool bIOFailure);
 	CCallResult<CallbackHandler, LeaderboardFindResult_t> m_callResultFindLeaderboard;
@@ -199,7 +271,11 @@ public:
 	void CreateUGCItem(AppId_t nConsumerAppId, EWorkshopFileType eFileType);
 	void OnUGCItemCreated( CreateItemResult_t *pResult, bool bIOFailure);
 	CCallResult<CallbackHandler, CreateItemResult_t> m_callResultCreateUGCItem;
-
+	
+	void SendQueryUGCRequest(UGCQueryHandle_t handle);
+	void OnUGCQueryCompleted( SteamUGCQueryCompleted_t* pResult, bool bIOFailure); 
+	CCallResult<CallbackHandler, SteamUGCQueryCompleted_t> m_callResultUGCQueryCompleted;
+	
 	void SubmitUGCItemUpdate(UGCUpdateHandle_t handle, const char *pchChangeNote);
 	void OnItemUpdateSubmitted( SubmitItemUpdateResult_t *pResult, bool bIOFailure);
 	CCallResult<CallbackHandler, SubmitItemUpdateResult_t> m_callResultSubmitUGCItemUpdate;
@@ -227,6 +303,7 @@ public:
 	void FileShare(const char* fileName);
 	void OnFileShared( RemoteStorageFileShareResult_t *pResult, bool bIOFailure);
 	CCallResult<CallbackHandler, RemoteStorageFileShareResult_t> m_callResultFileShare;
+	
 };
 
 void CallbackHandler::OnGamepadTextInputDismissed( GamepadTextInputDismissed_t *pCallback )
@@ -250,6 +327,30 @@ void CallbackHandler::OnAchievementStored( UserAchievementStored_t *pCallback )
 {
  	if (pCallback->m_nGameID != SteamUtils()->GetAppID()) return;
 	SendEvent(Event(kEventTypeOnUserAchievementStored, true, pCallback->m_rgchAchievementName));
+}
+
+void CallbackHandler::SendQueryUGCRequest(UGCQueryHandle_t handle)
+{
+	SteamAPICall_t hSteamAPICall = SteamUGC()->SendQueryUGCRequest(handle);
+	m_callResultUGCQueryCompleted.Set(hSteamAPICall, this, &CallbackHandler::OnUGCQueryCompleted);
+}
+
+void CallbackHandler::OnUGCQueryCompleted(SteamUGCQueryCompleted_t *pCallback, bool biOFailure)
+{
+	if (pCallback->m_eResult == k_EResultOK)
+	{
+		std::ostringstream data;
+		data << pCallback->m_handle << ",";
+		data << pCallback->m_unNumResultsReturned << ",";
+		data << pCallback->m_unTotalMatchingResults << ",";
+		data << pCallback->m_bCachedData;
+		
+		SendEvent(Event(kEventTypeOnUGCQueryCompleted, true, data.str().c_str()));
+	}
+	else
+	{
+		SendEvent(Event(kEventTypeOnUGCQueryCompleted, false));
+	}
 }
 
 void CallbackHandler::SubmitUGCItemUpdate(UGCUpdateHandle_t handle, const char *pchChangeNote)
@@ -678,6 +779,27 @@ void CallbackHandler::OnUGCDownload(RemoteStorageDownloadUGCResult_t* pResult, b
 	}
 	SendEvent(Event(kEventTypeOnUGCDownload, false));
 }
+
+void CallbackHandler::OnDownloadItem( DownloadItemResult_t *pCallback )
+{
+	if (pCallback->m_unAppID != SteamUtils()->GetAppID()) return;
+	
+	std::ostringstream fileIDStream;
+	PublishedFileId_t m_ugcFileID = pCallback->m_nPublishedFileId;
+	fileIDStream << m_ugcFileID;
+	SendEvent(Event(kEventTypeOnDownloadItem, pCallback->m_eResult == k_EResultOK, fileIDStream.str().c_str()));
+}
+
+void CallbackHandler::OnItemInstalled( ItemInstalled_t *pCallback )
+{
+	if (pCallback->m_unAppID != SteamUtils()->GetAppID()) return;
+	
+	std::ostringstream fileIDStream;
+	PublishedFileId_t m_ugcFileID = pCallback->m_nPublishedFileId;
+	fileIDStream << m_ugcFileID;
+	SendEvent(Event(kEventTypeOnDownloadItem, true, fileIDStream.str().c_str()));
+}
+
 //-----------------------------------------------------------------------------------------------------------
 static CallbackHandler* s_callbackHandler = NULL;
 
@@ -927,6 +1049,74 @@ value SteamWrap_SetUGCItemDescription(value updateHandle, value description)
 DEFINE_PRIM(SteamWrap_SetUGCItemDescription, 2);
 
 //-----------------------------------------------------------------------------------------------------------
+value SteamWrap_SetUGCItemTags(value updateHandle, value tags)
+{
+	if (!val_is_string(updateHandle) || !val_is_string(tags) || !CheckInit())
+	{
+		return alloc_bool(false);
+	}
+
+	// Create uint64 from the string.
+	uint64 updateHandle64;
+	std::istringstream handleStream(val_string(updateHandle));
+	if (!(handleStream >> updateHandle64))
+	{
+		return alloc_bool(false);
+	}
+	
+	// Create tag array from the string.
+	SteamParamStringArray_t *pTags = getSteamParamStringArray(val_string(tags));
+	
+	bool result = SteamUGC()->SetItemTags(updateHandle64, pTags);
+	
+	deleteSteamParamStringArray(pTags);
+	
+	return alloc_bool(result);
+}
+DEFINE_PRIM(SteamWrap_SetUGCItemTags, 2);
+
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_AddUGCItemKeyValueTag(value updateHandle, value keyStr, value valueStr)
+{
+	if (!CheckInit()) return alloc_bool(false);
+	if (!val_is_string(updateHandle)) return alloc_bool(false);
+	if (!val_is_string(keyStr)) return alloc_bool(false);
+	if (!val_is_string(valueStr)) return alloc_bool(false);
+	
+	// Create uint64 from the string.
+	uint64 updateHandle64;
+	std::istringstream handleStream(val_string(updateHandle));
+	if (!(handleStream >> updateHandle64))
+	{
+		return alloc_bool(false);
+	}
+	
+	bool result = SteamUGC()->AddItemKeyValueTag(updateHandle64, val_string(keyStr), val_string(valueStr));
+	return alloc_bool(result);
+}
+DEFINE_PRIM(SteamWrap_AddUGCItemKeyValueTag, 3);
+
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_RemoveUGCItemKeyValueTags(value updateHandle, value keyStr)
+{
+	if (!CheckInit()) return alloc_bool(false);
+	if (!val_is_string(updateHandle)) return alloc_bool(false);
+	if (!val_is_string(keyStr)) return alloc_bool(false);
+	
+	// Create uint64 from the string.
+	uint64 updateHandle64;
+	std::istringstream handleStream(val_string(updateHandle));
+	if (!(handleStream >> updateHandle64))
+	{
+		return alloc_bool(false);
+	}
+	
+	bool result = SteamUGC()->RemoveItemKeyValueTags(updateHandle64, val_string(keyStr));
+	return alloc_bool(result);
+}
+DEFINE_PRIM(SteamWrap_RemoveUGCItemKeyValueTags, 2);
+
+//-----------------------------------------------------------------------------------------------------------
 value SteamWrap_SetUGCItemVisibility(value updateHandle, value visibility)
 {
 	if (!val_is_string(updateHandle) || !val_is_int(visibility) || !CheckInit())
@@ -1003,6 +1193,66 @@ value SteamWrap_CreateUGCItem(value id)
 }
 DEFINE_PRIM(SteamWrap_CreateUGCItem, 1);
 
+//-----------------------------------------------------------------------------------------------------------
+int SteamWrap_AddRequiredTag(const char * handle, const char * tagName)
+{
+	if (!CheckInit()) return 0;
+	
+	UGCQueryHandle_t u64Handle = strtoull(handle, NULL, 0);
+	
+	bool result = SteamUGC()->AddRequiredTag(u64Handle, tagName);
+	return result;
+}
+DEFINE_PRIME2(SteamWrap_AddRequiredTag);
+
+//-----------------------------------------------------------------------------------------------------------
+int SteamWrap_AddRequiredKeyValueTag(const char * handle, const char * pKey, const char * pValue)
+{
+	if (!CheckInit()) return 0;
+	
+	UGCQueryHandle_t u64Handle = strtoull(handle, NULL, 0);
+	
+	bool result = SteamUGC()->AddRequiredKeyValueTag(u64Handle, pKey, pValue);
+	return result;
+}
+DEFINE_PRIME3(SteamWrap_AddRequiredKeyValueTag);
+
+//-----------------------------------------------------------------------------------------------------------
+int SteamWrap_AddExcludedTag(const char * handle, const char * tagName)
+{
+	if (!CheckInit()) return 0;
+	
+	UGCQueryHandle_t u64Handle = strtoull(handle, NULL, 0);
+	
+	bool result = SteamUGC()->AddExcludedTag(u64Handle, tagName);
+	return result;
+}
+DEFINE_PRIME2(SteamWrap_AddExcludedTag);
+
+//-----------------------------------------------------------------------------------------------------------
+int SteamWrap_SetReturnMetadata(const char * handle, int returnMetadata)
+{
+	if (!CheckInit()) return 0;
+	
+	UGCQueryHandle_t u64Handle = strtoull(handle, NULL, 0);
+	
+	bool result = SteamUGC()->SetReturnMetadata(u64Handle, returnMetadata == 1);
+	return result;
+}
+DEFINE_PRIME2(SteamWrap_SetReturnMetadata);
+
+//-----------------------------------------------------------------------------------------------------------
+int SteamWrap_SetReturnKeyValueTags(const char * handle, int returnKeyValueTags)
+{
+	if (!CheckInit()) return 0;
+	
+	UGCQueryHandle_t u64Handle = strtoull(handle, NULL, 0);
+	bool setValue = returnKeyValueTags == 1;
+	
+	bool result = SteamUGC()->SetReturnKeyValueTags(u64Handle, setValue);
+	return result;
+}
+DEFINE_PRIME2(SteamWrap_SetReturnKeyValueTags);
 
 //-----------------------------------------------------------------------------------------------------------
 value SteamWrap_SetAchievement(value name)
@@ -1136,6 +1386,19 @@ value SteamWrap_GetGlobalStat(value name)
 DEFINE_PRIM(SteamWrap_GetGlobalStat, 1);
 
 //-----------------------------------------------------------------------------------------------------------
+value SteamWrap_GetPersonaName()
+{
+	if(!CheckInit())
+		return alloc_string("unknown");
+	
+	const char * persona = SteamFriends()->GetPersonaName();
+	
+	return alloc_string(persona);
+}
+DEFINE_PRIM(SteamWrap_GetPersonaName, 0);
+
+
+//-----------------------------------------------------------------------------------------------------------
 value SteamWrap_GetSteamID()
 {
 	if(!CheckInit())
@@ -1203,47 +1466,317 @@ DEFINE_PRIM(SteamWrap_GetCurrentGameLanguage, 0);
 
 //-----------------------------------------------------------------------------------------------------------
 
-//STEAM WORKSHOP---------------------------------------------------------------------------------------------
+//NEW STEAM WORKSHOP---------------------------------------------------------------------------------------------
 
-void split(const std::string &s, char delim, std::vector<std::string> &elems) {
-	std::stringstream ss;
-	ss.str(s);
-	std::string item;
-	while (std::getline(ss, item, delim)) {
-		elems.push_back(item);
-	}
-}
-
-SteamParamStringArray_t * getSteamParamStringArray(const char * str)
+int SteamWrap_GetNumSubscribedItems(int dummy)
 {
-	std::string stdStr = str;
-	
-	//NOTE: this will probably fail if the string includes Unicode, but Steam tags probably don't support that?
-	std::vector<std::string> v;
-	split(stdStr, ',', v);
-	
-	SteamParamStringArray_t * params = new SteamParamStringArray_t;
-	
-	int count = v.size();
-	
-	params->m_nNumStrings = (int32) count;
-	params->m_ppStrings = new const char *[count];
-	
-	for(int i = 0; i < count; i++) {
-		params->m_ppStrings[i] = v[i].c_str();
-	}
-	
-	return params;
+	if (!CheckInit()) return 0;
+	int numItems = SteamUGC()->GetNumSubscribedItems();
+	return numItems;
 }
+DEFINE_PRIME1(SteamWrap_GetNumSubscribedItems);
 
-void deleteSteamParamStringArray(SteamParamStringArray_t * params)
+value SteamWrap_GetSubscribedItems()
 {
-	for(int i = 0; i < params->m_nNumStrings; i++){
-		delete params->m_ppStrings[i];
+	if (!CheckInit()) return alloc_string("");
+	
+	int numSubscribed = SteamUGC()->GetNumSubscribedItems();
+	if(numSubscribed <= 0) return alloc_string("");
+	PublishedFileId_t* pvecPublishedFileID = new PublishedFileId_t[numSubscribed];
+	
+	int result = SteamUGC()->GetSubscribedItems(pvecPublishedFileID, numSubscribed);
+	
+	std::ostringstream data;
+	for(int i = 0; i < result; i++){
+		if(i != 0){
+			data << ",";
+		}
+		data << pvecPublishedFileID[i];
 	}
-	delete[] params->m_ppStrings;
-	delete params;
+	delete pvecPublishedFileID;
+	
+	return alloc_string(data.str().c_str());
 }
+DEFINE_PRIM(SteamWrap_GetSubscribedItems, 0);
+
+int SteamWrap_GetItemState(const char * publishedFileID)
+{
+	if (!CheckInit()) return 0;
+	PublishedFileId_t nPublishedFileID = (PublishedFileId_t) strtoll(publishedFileID, NULL, 10);
+	return SteamUGC()->GetItemState(nPublishedFileID);
+}
+DEFINE_PRIME1(SteamWrap_GetItemState);
+
+value SteamWrap_GetItemDownloadInfo(value publishedFileID)
+{
+	if (!CheckInit()) return alloc_string("");
+	if (!val_is_string(publishedFileID)) return alloc_string("");
+	
+	PublishedFileId_t nPublishedFileID = (PublishedFileId_t) strtoll(val_string(publishedFileID), NULL, 10);
+	
+	uint64 punBytesDownloaded;
+	uint64 punBytesTotal;
+	
+	bool result = SteamUGC()->GetItemDownloadInfo(nPublishedFileID, &punBytesDownloaded, &punBytesTotal);
+	
+	if(result){
+		std::ostringstream data;
+		data << punBytesDownloaded;
+		data << ",";
+		data << punBytesTotal;
+		return alloc_string(data.str().c_str());
+	}
+	
+	return alloc_string("0,0");
+}
+DEFINE_PRIM(SteamWrap_GetItemDownloadInfo, 1);
+
+int SteamWrap_DownloadItem(const char * publishedFileID, int highPriority)
+{
+	if (!CheckInit()) return false;
+	PublishedFileId_t nPublishedFileID = (PublishedFileId_t) strtoll(publishedFileID, NULL, 10);
+	
+	bool bHighPriority = highPriority == 1;
+	bool result = SteamUGC()->DownloadItem(nPublishedFileID, bHighPriority);
+	return result;
+}
+DEFINE_PRIME2(SteamWrap_DownloadItem);
+
+value SteamWrap_GetItemInstallInfo(value publishedFileID, value maxFolderPathLength)
+{
+	if (!CheckInit()) return alloc_string("");
+	if (!val_is_string(publishedFileID)) return alloc_string("");
+	if (!val_is_int(maxFolderPathLength)) return alloc_string("");
+	
+	PublishedFileId_t nPublishedFileID = (PublishedFileId_t) strtoll(val_string(publishedFileID), NULL, 10);
+	
+	uint64 punSizeOnDisk;
+	uint32 punTimeStamp;
+	uint32 cchFolderSize = (uint32) val_int(maxFolderPathLength);
+	char * pchFolder = new char[cchFolderSize];
+	
+	bool result = SteamUGC()->GetItemInstallInfo(nPublishedFileID, &punSizeOnDisk, pchFolder, cchFolderSize, &punTimeStamp);
+	
+	if(result){
+		std::ostringstream data;
+		data << punSizeOnDisk;
+		data << "|";
+		data << pchFolder;
+		data << "|";
+		data << cchFolderSize;
+		data << "|";
+		data << punTimeStamp;
+		return alloc_string(data.str().c_str());
+	}
+	
+	return alloc_string("0||0|");
+}
+DEFINE_PRIM(SteamWrap_GetItemInstallInfo, 2);
+
+/*
+value SteamWrap_CreateQueryUserUGCRequest(value accountID, value listType, value matchingUGCType, value sortOrder, value creatorAppID, value consumerAppID, value page)
+{
+	if (!CheckInit()) return alloc_string("");
+	if (!val_is_int(accountID)) return alloc_string("");
+	if (!val_is_int(listType)) return alloc_string("");
+	if (!val_is_int(matchingUGCType)) return alloc_string("");
+	if (!val_is_int(sortOrder)) return alloc_string("");
+	if (!val_is_int(creatorAppID)) return alloc_string("");
+	if (!val_is_int(consumerAppID)) return alloc_string("");
+	if (!val_is_int(page)) return alloc_string("");
+	
+	AccountID_t unAccountID = val_int(accountID);
+	EUserUGCList eListType = val_int(listType);
+	EUGCMatchingUGCType eMatchingUGCType = val_int(matchingUGCType);
+	EUserUGCListSortOrder eSortOrder = val_int(sortOrder);
+	AppID_t nCreatorAppID = val_int(creatorAppID);
+	AppId_t nConsumerAppID = val_int(consumerAppID);
+	uint32 page = val_int(page);
+	
+	UGCQueryHandle_t result = SteamUGC()->SteamWrap_CreateQueryUserUGCRequest(unAccountID, eListType, eMatchingUGCType, eSortOrder, nCreatorAppID, nConsumerAppId, unPage);
+	
+	std:ostringstream data;
+	data << result;
+	return alloc_string(data.str().c_str());
+}
+DEFINE_PRIM(SteamWrap_CreateQueryUserUGCRequest, 7);
+*/
+
+value SteamWrap_CreateQueryAllUGCRequest(value queryType, value matchingUGCType, value creatorAppID, value consumerAppID, value page)
+{
+	if (!CheckInit()) return alloc_string("");
+	if (!val_is_int(queryType)) return alloc_string("");
+	if (!val_is_int(matchingUGCType)) return alloc_string("");
+	if (!val_is_int(creatorAppID)) return alloc_string("");
+	if (!val_is_int(consumerAppID)) return alloc_string("");
+	if (!val_is_int(page)) return alloc_string("");
+	
+	EUGCQuery eQueryType = (EUGCQuery) val_int(queryType);
+	EUGCMatchingUGCType eMatchingUGCType = (EUGCMatchingUGCType) val_int(matchingUGCType);
+	AppId_t nCreatorAppID = val_int(creatorAppID);
+	AppId_t nConsumerAppID = val_int(consumerAppID);
+	uint32 unPage = val_int(page);
+	
+	UGCQueryHandle_t result = SteamUGC()->CreateQueryAllUGCRequest(eQueryType, eMatchingUGCType, nCreatorAppID, nConsumerAppID, unPage);
+	
+	std::ostringstream data;
+	data << result;
+	return alloc_string(data.str().c_str());
+}
+DEFINE_PRIM(SteamWrap_CreateQueryAllUGCRequest, 5);
+
+value SteamWrap_CreateQueryUGCDetailsRequest(value fileIDs)
+{
+	if (!CheckInit()) return alloc_string("");
+	if (!val_is_string(fileIDs)) return alloc_string("");
+	uint32 unNumPublishedFileIDs = 0;
+	PublishedFileId_t * pvecPublishedFileID = getUint64Array(val_string(fileIDs), &unNumPublishedFileIDs);
+	
+	UGCQueryHandle_t result = SteamUGC()->CreateQueryUGCDetailsRequest(pvecPublishedFileID, unNumPublishedFileIDs);
+	
+	std::ostringstream data;
+	data << result;
+	return alloc_string(data.str().c_str());
+}
+DEFINE_PRIM(SteamWrap_CreateQueryUGCDetailsRequest, 1);
+
+
+void SteamWrap_SendQueryUGCRequest(const char * cHandle)
+{
+	if (!CheckInit()) return;
+	
+	UGCQueryHandle_t handle = strtoull(cHandle, NULL, 0);
+	
+	s_callbackHandler->SendQueryUGCRequest(handle);
+}
+DEFINE_PRIME1v(SteamWrap_SendQueryUGCRequest);
+
+
+int SteamWrap_GetQueryUGCNumKeyValueTags(const char * cHandle, int iIndex)
+{
+	if (!CheckInit()) return 0;
+	
+	UGCQueryHandle_t handle = strtoull(cHandle, NULL, 0);
+	uint32 index = iIndex;
+	
+	return SteamUGC()->GetQueryUGCNumKeyValueTags(handle, index);
+}
+DEFINE_PRIME2(SteamWrap_GetQueryUGCNumKeyValueTags);
+
+int SteamWrap_ReleaseQueryUGCRequest(const char * cHandle)
+{
+	if (!CheckInit()) return false;
+	UGCQueryHandle_t handle = strtoull(cHandle, NULL, 0);
+	return SteamUGC()->ReleaseQueryUGCRequest(handle);
+}
+DEFINE_PRIME1v(SteamWrap_ReleaseQueryUGCRequest);
+
+value SteamWrap_GetQueryUGCKeyValueTag(value cHandle, value iIndex, value iKeyValueTagIndex, value keySize, value valueSize)
+{
+	if (!CheckInit()) return alloc_string("");
+	if (!val_is_string(cHandle)) return alloc_string("");
+	if (!val_is_int(iIndex)) return alloc_string("");
+	if (!val_is_int(iKeyValueTagIndex)) return alloc_string("");
+	if (!val_is_int(keySize)) return alloc_string("");
+	if (!val_is_int(valueSize)) return alloc_string("");
+	
+	UGCQueryHandle_t handle = strtoull(val_string(cHandle), NULL, 0);
+	uint32 index = val_int(iIndex);
+	uint32 keyValueTagIndex = val_int(iKeyValueTagIndex);
+	uint32 cchKeySize = val_int(keySize);
+	uint32 cchValueSize = val_int(valueSize);
+	
+	char *pchKey = new char[cchKeySize];
+	char *pchValue = new char[cchValueSize];
+	
+	SteamUGC()->GetQueryUGCKeyValueTag(handle, index, keyValueTagIndex, pchKey, cchKeySize, pchValue, cchValueSize);
+	
+	std::ostringstream data;
+	data << pchKey << "=" << pchValue;
+	
+	delete pchKey;
+	delete pchValue;
+	
+	return alloc_string(data.str().c_str());
+}
+DEFINE_PRIM(SteamWrap_GetQueryUGCKeyValueTag, 5);
+
+value SteamWrap_GetQueryUGCMetadata(value sHandle, value iIndex, value iMetaDataSize)
+{
+	if (!CheckInit()) return alloc_string("");
+	if (!val_is_string(sHandle)) return alloc_string("");
+	if (!val_is_int(iIndex)) return alloc_string("");
+	if (!val_is_int(iMetaDataSize)) return alloc_string("");
+	
+	UGCQueryHandle_t handle = strtoull(val_string(sHandle), NULL, 0);
+	
+	
+	uint32 cchMetadatasize = val_int(iMetaDataSize);
+	char * pchMetadata = new char[cchMetadatasize];
+	
+	uint32 index = val_int(iIndex);
+	
+	SteamUGC()->GetQueryUGCMetadata(handle, index, pchMetadata, cchMetadatasize);
+	
+	std::ostringstream data;
+	data << pchMetadata;
+	
+	delete pchMetadata;
+	
+	return alloc_string(data.str().c_str());
+}
+DEFINE_PRIM(SteamWrap_GetQueryUGCMetadata, 3);
+
+value SteamWrap_GetQueryUGCResult(value sHandle, value iIndex)
+{
+	if (!CheckInit()) return alloc_string("");
+	if (!val_is_string(sHandle)) return alloc_string("");
+	if (!val_is_int(iIndex)) return alloc_string("");
+	
+	UGCQueryHandle_t handle = strtoull(val_string(sHandle), NULL, 0);
+	
+	uint32 index = val_int(iIndex);
+	
+	SteamUGCDetails_t * d = new SteamUGCDetails_t;
+	
+	SteamUGC()->GetQueryUGCResult(handle, index, d);
+	
+	std::ostringstream data;
+	
+	data << "publishedFileID:" << d->m_nPublishedFileId << ",";
+	data << "result:" << d->m_eResult << ",";
+	data << "fileType:" << d->m_eFileType<< ",";
+	data << "creatorAppID:" << d->m_nCreatorAppID<< ",";
+	data << "consumerAppID:" << d->m_nConsumerAppID<< ",";
+	data << "title:" << d->m_rgchTitle<< ",";
+	data << "description:" << d->m_rgchDescription<< ",";
+	data << "steamIDOwner:" << d->m_ulSteamIDOwner<< ",";
+	data << "timeCreated:" << d->m_rtimeCreated<< ",";
+	data << "timeUpdated:" << d->m_rtimeUpdated<< ",";
+	data << "timeAddedToUserList:" << d->m_rtimeAddedToUserList<< ",";
+	data << "visibility:" << d->m_eVisibility<< ",";
+	data << "banned:" << d->m_bBanned<< ",";
+	data << "acceptedForUse:" << d->m_bAcceptedForUse<< ",";
+	data << "tagsTruncated:" << d->m_bTagsTruncated<< ",";
+	data << "tags:" << d->m_rgchTags<< ",";
+	data << "file:" << d->m_hFile<< ",";
+	data << "previewFile:" << d->m_hPreviewFile<< ",";
+	data << "fileName:" << d->m_pchFileName<< ",";
+	data << "fileSize:" << d->m_nFileSize<< ",";
+	data << "previewFileSize:" << d->m_nPreviewFileSize<< ",";
+	data << "rgchURL:" << d->m_rgchURL<< ",";
+	data << "votesup:" << d->m_unVotesUp<< ",";
+	data << "votesDown:" << d->m_unVotesDown<< ",";
+	data << "score:" << d->m_flScore<< ",";
+	data << "numChildren:" << d->m_unNumChildren;
+	
+	delete d;
+	
+	return alloc_string(data.str().c_str());
+}
+DEFINE_PRIM(SteamWrap_GetQueryUGCResult, 2);
+
+//OLD STEAM WORKSHOP---------------------------------------------------------------------------------------------
 
 value SteamWrap_GetUGCDownloadProgress(value contentHandle)
 {

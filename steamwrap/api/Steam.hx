@@ -4,7 +4,10 @@ import cpp.Lib;
 import haxe.Int64;
 import steamwrap.api.Steam.EnumerateWorkshopFilesResult;
 import steamwrap.api.Steam.DownloadUGCResult;
+import steamwrap.api.Steam.GetItemInstallInfoResult;
 import steamwrap.api.Steam.GetPublishedFileDetailsResult;
+import steamwrap.api.Steam.SteamUGCDetails;
+import steamwrap.api.Steam.SteamUGCQueryCompleted;
 import steamwrap.helpers.Loader;
 import steamwrap.helpers.Util;
 
@@ -59,7 +62,7 @@ class Steam
 	public static var cloud(default, null):Cloud;
 	
 	/**
-	 * The Steam Workshop API
+	 * DEPRECATED: The Steam Workshop API, provided here for legacy support. The UGC API supercedes it and is generally preferred.
 	 */
 	public static var workshop(default, null):Workshop;
 	
@@ -80,6 +83,10 @@ class Steam
 	public static var whenUserPublishedFilesEnumerated:Bool->EnumerateUserPublishedFilesResult->Void;
 	public static var whenUGCDownloaded:Bool->DownloadUGCResult->Void;
 	public static var whenPublishedFileDetailsGotten:Bool->GetPublishedFileDetailsResult->Void;
+	
+	public static var whenItemInstalled:String->Void;
+	public static var whenItemDownloaded:Bool->String->Void;
+	public static var whenQueryUGCRequestSent:SteamUGCQueryCompleted->Void;
 	
 	/**
 	 * @param appId_	Your Steam APP ID (the numbers on the end of your store page URL - store.steampowered.com/app/XYZ)
@@ -116,6 +123,7 @@ class Steam
 			SteamWrap_GetNumAchievements = cpp.Lib.load("steamwrap", "SteamWrap_GetNumAchievements", 0);
 			SteamWrap_GetAchievementName = cpp.Lib.load("steamwrap", "SteamWrap_GetAchievementName", 1);
 			SteamWrap_GetSteamID = cpp.Lib.load("steamwrap", "SteamWrap_GetSteamID", 0);
+			SteamWrap_GetPersonaName = cpp.Lib.load("steamwrap", "SteamWrap_GetPersonaName", 0);
 			SteamWrap_SetStat = cpp.Lib.load("steamwrap", "SteamWrap_SetStat", 2);
 			SteamWrap_SetStatFloat = cpp.Lib.load("steamwrap", "SteamWrap_SetStatFloat", 2);
 			SteamWrap_SetStatInt = cpp.Lib.load("steamwrap", "SteamWrap_SetStatInt", 2);
@@ -213,6 +221,14 @@ class Steam
 	
 	public static function getCurrentGameLanguage() {
 		return SteamWrap_GetCurrentGameLanguage();
+	}
+	
+	
+	
+	public static function getPersonaName():String {
+		if (!active)
+			return "unknown";
+		return SteamWrap_GetPersonaName();
 	}
 	
 	/**
@@ -537,7 +553,21 @@ class Steam
 					var result = GetPublishedFileDetailsResult.fromString(data);
 					whenPublishedFileDetailsGotten(success, result);
 				}
-			
+			case "ItemInstalled":
+				if (whenItemInstalled != null) {
+					var result:String = cast data;
+					whenItemInstalled(result);
+				}
+			case "ItemDownloaded":
+				if (whenItemDownloaded != null) {
+					var result:String = cast data;
+					whenItemDownloaded(success, result);
+				}
+			case "UGCQueryCompleted":
+				if (whenQueryUGCRequestSent != null) {
+					var result = SteamUGCQueryCompleted.fromString(data);
+					whenQueryUGCRequestSent(result);
+				}
 		}
 	}
 	
@@ -557,6 +587,7 @@ class Steam
 	private static var SteamWrap_GetNumAchievements:Void->Int;
 	private static var SteamWrap_GetAchievementName:Int->String;
 	private static var SteamWrap_GetSteamID:Void->String;
+	private static var SteamWrap_GetPersonaName:Void->String;
 	private static var SteamWrap_ClearAchievement:Dynamic;
 	private static var SteamWrap_IndicateAchievementProgress:Dynamic;
 	private static var SteamWrap_StoreStats:Dynamic;
@@ -594,7 +625,7 @@ class LeaderboardScore {
 	public static function fromString(str:String):LeaderboardScore {
 		var tokens = str.split(",");
 		if (tokens.length == 4)
-			return new LeaderboardScore(tokens[0], Std.parseInt(tokens[1]), Std.parseInt(tokens[2]), Std.parseInt(tokens[3]));
+			return new LeaderboardScore(tokens[0], Util.str2Int(tokens[1]), Util.str2Int(tokens[2]), Util.str2Int(tokens[3]));
 		else
 			return null;
 	}
@@ -627,7 +658,7 @@ class EnumerateUserSubscribedFilesResult extends EnumerateUserPublishedFilesResu
 				var nameValue = str.split(":");
 				
 				if (nameValue[0] == "timeSubscribed"){
-					timeSubscribed.push(Std.parseInt(nameValue[1]));
+					timeSubscribed.push(Util.str2Int(nameValue[1]));
 					currField = "timeSubscribed";
 				}
 				
@@ -635,7 +666,7 @@ class EnumerateUserSubscribedFilesResult extends EnumerateUserPublishedFilesResu
 			else
 			{
 				if (currField == "timeSubscribed"){
-					timeSubscribed.push(Std.parseInt(str));
+					timeSubscribed.push(Util.str2Int(str));
 				}
 			}
 		}
@@ -680,8 +711,8 @@ class EnumerateWorkshopFilesResult extends EnumerateUserPublishedFilesResult
 			{
 				var nameValue = str.split(":");
 				switch(nameValue[0]) {
-					case "appID":       appID = Std.parseInt(nameValue[1]);
-					case "startIndex":  startIndex = Std.parseInt(nameValue[1]);
+					case "appID":       appID = Util.str2Int(nameValue[1]);
+					case "startIndex":  startIndex = Util.str2Int(nameValue[1]);
 					default: //do nothing
 				}
 			}
@@ -731,9 +762,9 @@ class EnumerateUserPublishedFilesResult
 				currField = "";
 				var nameValue = str.split(":");
 				switch(nameValue[0]){
-					case "result":           result = Std.parseInt(nameValue[1]);
-					case "resultsReturned":  resultsReturned = Std.parseInt(nameValue[1]);
-					case "totalResults":     totalResults = Std.parseInt(nameValue[1]);
+					case "result":           result = Util.str2Int(nameValue[1]);
+					case "resultsReturned":  resultsReturned = Util.str2Int(nameValue[1]);
+					case "totalResults":     totalResults = Util.str2Int(nameValue[1]);
 					case "publishedFileIds": publishedFileIds.push(nameValue[1]);
 						                     currField = "publishedFileIds";
 				}
@@ -800,10 +831,10 @@ class DownloadUGCResult
 			{
 				var nameValue = str.split(":");
 				switch(nameValue[0]){
-					case "result":       result = Std.parseInt(nameValue[1]);
+					case "result":       result = Util.str2Int(nameValue[1]);
 					case "fileHandle":   fileHandle = nameValue[1];
-					case "appID":        appID = Std.parseInt(nameValue[1]);
-					case "sizeInBytes":  sizeInBytes = Std.parseInt(nameValue[1]);
+					case "appID":        appID = Util.str2Int(nameValue[1]);
+					case "sizeInBytes":  sizeInBytes = Util.str2Int(nameValue[1]);
 					case "fileName":     fileName = nameValue[1];
 					case "steamIDOwner": steamIDOwner = nameValue[1];
 				}
@@ -816,6 +847,52 @@ class DownloadUGCResult
 	public function toString():String
 	{
 		return ("{result:" + result + ",fileHandle:" + fileHandle+",appID:" + appID + ",sizeInBytes:" + sizeInBytes + ",fileName:" + fileName+",steamIDOwner:" + steamIDOwner + "}");
+	}
+}
+
+class GetItemInstallInfoResult
+{
+	public var sizeOnDisk:Int;
+	public var folder:String;
+	public var timeStamp:String;
+	
+	public function new(SizeOnDisk:Int = 0, Folder:String = "", TimeStamp:String = "")
+	{
+		sizeOnDisk = SizeOnDisk;
+		folder = Folder;
+		timeStamp = TimeStamp;
+	}
+	
+	public static function fromString(str:String):GetItemInstallInfoResult
+	{
+		var sizeOnDisk:Int = 0;
+		var folder:String = "";
+		var timeStamp:String = "";
+		
+		var folderSize:Int = 0;
+		
+		var arr = str.split("|");
+		
+		if (arr != null && arr.length == 4){
+			var sizeOnDiskStr = arr[0];
+			folder = arr[1];
+			var folderSizeStr = arr[2];
+			timeStamp = arr[3];
+			
+			var i:Null<Int> = 0;
+			
+			i = Util.str2Int(sizeOnDiskStr);
+			sizeOnDisk = (i != null) ? i : 0;
+			
+			i = Util.str2Int(folderSizeStr);
+			folderSize = (i != null) ? i : 0;
+		}
+		
+		if(folder.length > folderSize){
+			folder = folder.substr(0, folderSize);
+		}
+		
+		return new GetItemInstallInfoResult(sizeOnDisk, folder, timeStamp);
 	}
 }
 
@@ -920,7 +997,7 @@ class GetPublishedFileDetailsResult
 			{
 				var nameValue = str.split(":");
 				switch(nameValue[0]){
-					case "result":             result = Std.parseInt(nameValue[1]);
+					case "result":             result = Util.str2Int(nameValue[1]);
 					case "publishedFileID":    fileID = nameValue[1];
 					case "creatorAppID":       creatorAppID = nameValue[1];
 					case "consumerAppID":      consumerAppID = nameValue[1];
@@ -929,15 +1006,15 @@ class GetPublishedFileDetailsResult
 					case "fileHandle":         fileHandle = nameValue[1];
 					case "previewFileHandle":  previewFileHandle = nameValue[1];
 					case "steamIDOwner":       steamIDOwner = nameValue[1];
-					case "timeCreated":        timeCreated = Std.parseInt(nameValue[1]);
-					case "timeUpdated":        timeUpdated = Std.parseInt(nameValue[1]);
-					case "visibility":         visibility = Std.parseInt(nameValue[1]);
+					case "timeCreated":        timeCreated = Util.str2Int(nameValue[1]);
+					case "timeUpdated":        timeUpdated = Util.str2Int(nameValue[1]);
+					case "visibility":         visibility = Util.str2Int(nameValue[1]);
 					case "banned":             banned = Util.boolify(nameValue[1]);
 					case "tagsTruncated":      tagsTruncated = Util.boolify(nameValue[1]);
 					case "fileName":           fileName = nameValue[1];
-					case "fileSize":           fileSize = Std.parseInt(nameValue[1]);
+					case "fileSize":           fileSize = Util.str2Int(nameValue[1]);
 					case "url":                url = nameValue[1];
-					case "fileType":           fileType = Std.parseInt(nameValue[1]);
+					case "fileType":           fileType = Util.str2Int(nameValue[1]);
 					case "acceptedForUse":     acceptedForUse = Util.boolify(nameValue[1]);
 				}
 			}
@@ -964,6 +1041,341 @@ class GetPublishedFileDetailsResult
 			fileType,
 			acceptedForUse
 		);
+	}
+}
+
+class SteamUGCQueryCompleted
+{
+	public var handle:String = "";
+	public var result:EResult = EResult.Fail;
+	public var numResultsReturned:Int = 0;
+	public var totalMatchingResults:Int = 0;
+	public var cachedData:Bool = false;
+	
+	public function new(){}
+	
+	public static function fromString(str:String):SteamUGCQueryCompleted{
+		var arr = str.split(",");
+		var data = new SteamUGCQueryCompleted();
+		if(arr != null && arr.length >= 4){
+			var handle:String = arr[0];
+			var result:EResult = Util.str2Int(arr[1]);
+			var numResultsReturned:Int = Util.str2Int(arr[2]);
+			var totalMatchingResults:Int = Util.str2Int(arr[3]);
+			var cachedData:Bool = Util.boolify(arr[4]);
+			data.handle = handle;
+			data.result = result;
+			data.numResultsReturned = numResultsReturned;
+			data.totalMatchingResults = totalMatchingResults;
+			data.cachedData = cachedData;
+		}
+		return data;
+	}
+}
+
+class SteamUGCDetails
+{
+	public var publishedFileId:String = "";
+	
+	/** The result of the operation. **/
+	public var result:EResult = EResult.Fail;
+	
+	/** Type of the file **/
+	public var fileType:EWorkshopFileType = EWorkshopFileType.Community;
+	
+	/** ID of the app that created this file **/
+	public var creatorAppID:String = "";
+	
+	/** ID of the app that will consume this file **/
+	public var consumerAppID:String = "";
+	
+	/** title of document **/
+	public var title:String = "";
+	
+	/** description of document **/
+	public var description:String = "";
+	
+	/** Steam ID of the user who created this content **/
+	public var steamIDOwner:String = "";
+	
+	/** time when the published file was created **/
+	public var timeCreated:Float = 0;
+	
+	/** time when the published file was last updated **/
+	public var timeUpdated:Float = 0;
+	
+	/** time when the user added the published file to their list (not always applicable) **/
+	public var timeAddedToUserList:Float = 0;
+	
+	/** visibility **/
+	public var visibility:EPublishedFileVisibility = EPublishedFileVisibility.Private;
+	
+	/** whether the file was banned **/
+	public var banned:Bool = false;
+	
+	/** developer has specifically flagged this item as accepted in the Workshop **/
+	public var acceptedForUse:Bool = false;
+	
+	/** whether the list of tags was too long to be returned in the provided buffer **/
+	public var tagsTruncated:Bool = false;
+	
+	/** comma separated list of all tags associated with this file **/
+	public var tags:String = "";
+	
+	/** The handle of the primary file **/
+	public var file:String = "";
+	
+	/** The handle of the preview file **/
+	public var previewFile:String = "";
+	
+	/** The cloud filename of the primary file **/
+	public var fileName:String = "";
+	
+	/** Size of the primary file **/
+	public var fileSize:Int = 0;
+	
+	/** Size of the preview file **/
+	public var previewFileSize:Int = 0;
+	
+	/** URL (for a video or a website) **/
+	public var url:String = "";
+	
+	/** number of votes up **/
+	public var votesUp:Int = 0;
+	
+	/** number of votes down **/
+	public var votesDown:Int = 0;
+	
+	/** calculated score **/
+	public var score:Float = 0.0;
+	
+	/** collection details **/
+	public var numChildren:Int = 0;
+	
+	public function new(
+		PublishedFileId:String = "",
+		Result:EResult = EResult.Fail,
+		FileType:EWorkshopFileType = EWorkshopFileType.Community,
+		CreatorAppID:String = "",
+		ConsumerAppID:String = "",
+		Title:String = "",
+		Description:String = "",
+		SteamIDOwner:String = "",
+		TimeCreated:Float = 0,
+		TimeUpdated:Float = 0,
+		TimeAddedToUserList:Float = 0,
+		Visibility:EPublishedFileVisibility = EPublishedFileVisibility.Private,
+		Banned:Bool = false,
+		AcceptedForUse:Bool = false,
+		TagsTruncated:Bool = false,
+		Tags:String = "",
+		File:String = "",
+		PreviewFile:String = "",
+		FileName:String = "",
+		FileSize:Int = 0,
+		PreviewFileSize:Int = 0,
+		URL:String = "",
+		VotesUp:Int = 0,
+		VotesDown:Int = 0,
+		Score:Float = 0.0,
+		NumChildren:Int = 0
+	)
+	{
+		publishedFileId = PublishedFileId;
+		result = Result;
+		fileType = FileType;
+		creatorAppID = CreatorAppID;
+		consumerAppID = ConsumerAppID;
+		title = Title;
+		description = Description;
+		steamIDOwner = SteamIDOwner;
+		timeCreated = TimeCreated;
+		timeUpdated = TimeUpdated;
+		timeAddedToUserList = TimeAddedToUserList;
+		visibility = Visibility;
+		banned = Banned;
+		acceptedForUse = AcceptedForUse;
+		tagsTruncated = TagsTruncated;
+		tags = Tags;
+		file = File;
+		previewFile = PreviewFile;
+		fileName = FileName;
+		fileSize = FileSize;
+		previewFileSize = PreviewFileSize;
+		url = URL;
+		votesUp = VotesUp;
+		votesDown = VotesDown;
+		score = Score;
+		numChildren = NumChildren;
+	}
+	
+	public static function fromString(str:String):SteamUGCDetails{
+		var PublishedFileId:String = "";
+		var Result:EResult = EResult.Fail;
+		var FileType:EWorkshopFileType = EWorkshopFileType.Community;
+		var CreatorAppID:String = "";
+		var ConsumerAppID:String = "";
+		var Title:String = "";
+		var Description:String = "";
+		var SteamIDOwner:String = "";
+		var TimeCreated:Float = 0;
+		var TimeUpdated:Float = 0;
+		var TimeAddedToUserList:Float = 0;
+		var Visibility:EPublishedFileVisibility = EPublishedFileVisibility.Private;
+		var Banned:Bool = false;
+		var AcceptedForUse:Bool = false;
+		var TagsTruncated:Bool = false;
+		var Tags:String = "";
+		var File:String = "";
+		var PreviewFile:String = "";
+		var FileName:String = "";
+		var FileSize:Int = 0;
+		var PreviewFileSize:Int = 0;
+		var URL:String = "";
+		var VotesUp:Int = 0;
+		var VotesDown:Int = 0;
+		var Score:Float = 0.0;
+		var NumChildren:Int = 0;
+		
+		var arr = str.split(",");
+		for (str in arr){
+			if (str.indexOf(":") != -1)
+			{
+				var nameValue = str.split(":");
+				var val = nameValue[1];
+				
+				switch(nameValue[0]){
+					case "publishedFileId": PublishedFileId = val;
+					case "result": Result = Util.str2Int(val);
+					case "fileType": FileType = Util.str2Int(val);
+					case "creatorAppID": CreatorAppID = val;
+					case "consumerAppID": ConsumerAppID = val;
+					case "title": Title = val;
+					case "description": Description = val;
+					case "steamIDOwner": SteamIDOwner = val;
+					case "timeCreated": TimeCreated = Util.str2Float(val);
+					case "timeUpdate": TimeUpdated = Util.str2Float(val);
+					case "timeAddedToUserList": TimeAddedToUserList = Util.str2Float(val);
+					case "visibility": Visibility = Util.str2Int(val);
+					case "banned": Banned = Util.boolify(val);
+					case "acceptedForUse": AcceptedForUse = Util.boolify(val);
+					case "tagsTruncated": TagsTruncated = Util.boolify(val);
+					case "tags": Tags = val;
+					case "file": File = val;
+					case "previewFile": PreviewFile = val;
+					case "fileName": FileName = val;
+					case "fileSize": FileSize = Util.str2Int(val);
+					case "previewFileSize": PreviewFileSize = Util.str2Int(val);
+					case "url": URL = val;
+					case "votesUp": VotesUp = Util.str2Int(val);
+					case "votesDown": VotesDown = Util.str2Int(val);
+					case "score": Score = Util.str2Float(val);
+					case "numChildren": NumChildren = Util.str2Int(val);
+				}
+			}
+		}
+		
+		return new SteamUGCDetails(
+			PublishedFileId,
+			Result,
+			FileType,
+			CreatorAppID,
+			ConsumerAppID,
+			Title,
+			Description,
+			SteamIDOwner,
+			TimeCreated,
+			TimeUpdated,
+			TimeAddedToUserList,
+			Visibility,
+			Banned,
+			AcceptedForUse,
+			TagsTruncated,
+			Tags,
+			File,
+			PreviewFile,
+			FileName,
+			FileSize,
+			PreviewFileSize,
+			URL,
+			VotesUp,
+			VotesDown,
+			Score,
+			NumChildren
+		);
+	}
+	
+	public function toString():String{
+		var names:Array<String> =
+		[
+			"publishedFileId",
+			"result",
+			"fileType",
+			"creatorAppID",
+			"consumerAppID",
+			"title",
+			"description",
+			"steamIDOwner",
+			"timeCreated",
+			"timeUpdated",
+			"timeAddedToUserList",
+			"visibility",
+			"banned",
+			"acceptedForUse",
+			"tagsTruncated",
+			"tags",
+			"file",
+			"previewFile",
+			"fileName",
+			"fileSize",
+			"previewFileSize",
+			"url",
+			"votesUp",
+			"votesDown",
+			"score",
+			"numChildren"
+		];
+		var values:Array<Dynamic> = 
+		[
+			publishedFileId,
+			result,
+			fileType,
+			creatorAppID,
+			consumerAppID,
+			title,
+			description,
+			steamIDOwner,
+			timeCreated,
+			timeUpdated,
+			timeAddedToUserList,
+			visibility,
+			banned,
+			acceptedForUse,
+			tagsTruncated,
+			tags,
+			file,
+			previewFile,
+			fileName,
+			fileSize,
+			previewFileSize,
+			url,
+			votesUp,
+			votesDown,
+			score,
+			numChildren
+		];
+		
+		var str = "{";
+		for (i in 0...names.length){
+			var name = names[i];
+			var value = values[i];
+			str += name+":" + value;
+			if (i != names.length - 1){
+				str += ",";
+			}
+		}
+		str += "}";
+		return str;
 	}
 }
 
@@ -1189,6 +1601,163 @@ class GetPublishedFileDetailsResult
 	
 	public inline function toInt():Int
 	{
+		return cast this;
+	}
+}
+
+@:enum abstract EItemState(Int) from Int to Int
+{
+	/**item not tracked on client**/
+	var None			= 0; 
+	
+	/**current user is subscribed to this item. Not just cached.**/
+	var Subscribed		= 1;
+	
+	/**item was created with ISteamRemoteStorage**/
+	var LegacyItem		= 2;
+	
+	/**item is installed and usable (but maybe out of date)**/
+	var Installed		= 4;
+	
+	/**items needs an update. Either because it's not installed yet or creator updated content**/
+	var NeedsUpdate		= 8;
+	
+	/**item update is currently downloading**/
+	var Downloading		= 16;
+	
+	/**DownloadItem() was called for this item, content isn't available until DownloadItemResult_t is fired**/
+	var DownloadPending	= 32;
+	
+	public function has(state:EItemState):Bool
+	{
+		return this & state != None;
+	}
+	
+	public inline function fromInt(i:Int){
+		if (i < 0) i = 0;
+		if (i > 32) i = 32;
+		this = switch(i){
+			case 0, 1, 2, 4, 8, 16, 32: i;
+			default: 0;
+		}
+	}
+	
+	public inline function toInt():Int{
+		return cast this;
+	}
+}
+
+@:enum abstract EUGCQuery(Int) from Int to Int
+{
+	var RankedByVote:Int									= 0;
+	var RankedByPublicationDate:Int							= 1;
+	var AcceptedForGameRankedByAcceptanceDate:Int			= 2;
+	var RankedByTrend:Int									= 3;
+	var FavoritedByFriendsRankedByPublicationDate			= 4;
+	var CreatedByFriendsRankedByPublicationDate:Int			= 5;
+	var RankedByNumTimesReported:Int						= 6;
+	var CreatedByFollowedUsersRankedByPublicationDate:Int	= 7;
+	var NotYetRated:Int										= 8;
+	var RankedByTotalVotesAsc:Int							= 9;
+	var RankedByVotesUp:Int									= 10;
+	var RankedByTextSearch:Int								= 11;
+	var RankedByTotalUniqueSubscriptions:Int				= 12;
+	var RankedByPlaytimeTrend:Int							= 13;
+	var RankedByTotalPlaytime:Int							= 14;
+	var RankedByAveragePlaytimeTrend:Int					= 15;
+	var RankedByLifetimeAveragePlaytime:Int					= 16;
+	var RankedByPlaytimeSessionsTrend:Int					= 17;
+	var RankedByLifetimePlaytimeSessions:Int				= 18;
+	
+	public inline function fromInt(i:Int){
+		if (i < 0) i = 0;
+		if (i > 18) i = 18;
+		this = i;
+	}
+	
+	public inline function toInt():Int{
+		return cast this;
+	}
+}
+
+@:enum abstract EUGCMatchingUGCType(Int) from Int to Int
+{
+	/**both mtx items and ready-to-use items**/
+	var Items:Int			= 0;
+	var Items_Mtx:Int		= 1;
+	var Items_ReadyToUse	= 2;
+	var Collections:Int		= 3;
+	var Artwork:Int			= 4;
+	var Videos:Int			= 5;
+	var Screenshots:Int		= 6;
+	/**both web quides and integrated guides**/
+	var AllGuides:Int		= 7;
+	var WebGuides:Int		= 8;
+	var IntegratedGuides	= 9;
+	/**ready-to-use items and integrated guides**/
+	var UsableInGame:Int	= 10;
+	var ControllerBindings	= 11;
+	/**game managed items (not managed by users)**/
+	var GameManagedItems	= 12;
+	/**return everything**/
+	var All:Int				= ~0;
+	
+	public inline function fromInt(i:Int){
+		if (i < -1) i = -1;
+		if (i > 12) i = 12;
+		this = i;
+	}
+	
+	public inline function toInt():Int{
+		return cast this;
+	}
+}
+
+/**
+ * Different lists of published UGC for a user.
+ * If the current logged in user is different than the specified user, the same options may not be 
+ * allowed.
+ */
+@:enum abstract EUserUGCList(Int) from Int to Int
+{
+	var Published:Int		= 0;
+	var VotedOn:Int			= 1;
+	var VotedUp:Int			= 2;
+	var VotedDown:Int		= 3;
+	var WillVoteLater:Int	= 4;
+	var Favorited:Int		= 5;
+	var Subscribed:Int		= 6;
+	var UsedOrPlayed:Int	= 7;
+	var Followed:Int		= 8;
+	
+	public inline function fromInt(i:Int){
+		if (i < 0) i = 0;
+		if (i > 8) i = 8;
+		this = i;
+	}
+	
+	public inline function toInt():Int{
+		return cast this;
+	}
+}
+
+@:enum abstract EUserUGCListSortOrder(Int) from Int to Int
+{
+	var CreationOrderDesc:Int		= 0;
+	var CreationOrderAsc:Int		= 1;
+	var TitleAsc:Int				= 2;
+	var LastUpdatedDesc:Int			= 3;
+	var SubscriptionDateDesc:Int	= 4;
+	var VoteScoreDesc:Int			= 5;
+	var ForModeration:Int			= 6;
+	
+	public inline function fromInt(i:Int){
+		if (i < 0) i = 0;
+		if (i > 6) i = 6;
+		this = i;
+	}
+	
+	public inline function toInt():Int{
 		return cast this;
 	}
 }

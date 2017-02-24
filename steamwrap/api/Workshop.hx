@@ -7,6 +7,7 @@ import steamwrap.helpers.Loader;
 import steamwrap.helpers.MacroHelper;
 
 /**
+ * NOTE: The Workshop API is deprecated, it's here for legacy purposes. You should use the UGC API for new projects.
  * The Workshop API. Used by API.hx, should never be created manually by the user.
  * API.hx creates and initializes this by default.
  * Access it via API.workshop static variable
