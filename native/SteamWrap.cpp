@@ -2002,6 +2002,8 @@ DEFINE_PRIM(SteamWrap_GetQuota,0);
 //-----------------------------------------------------------------------------------------------------------
 value SteamWrap_InitControllers()
 {
+	if (!SteamController()) return alloc_bool(false);
+
 	bool result = SteamController()->Init();
 	
 	if (result)
