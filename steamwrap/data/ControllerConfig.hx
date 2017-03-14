@@ -129,6 +129,17 @@ class ControllerConfig
 	{
 		for (actionSetName in Reflect.fields(actionRoot))
 		{
+			if (actionSetName == "obj")
+			{
+				//Strip out parsing artifacts -- empty objects named "obj" that have no children or properties
+				var obj = Reflect.field(actionRoot, actionSetName);
+				var fields = Reflect.fields(obj);
+				if (fields == null || fields.length == 0)
+				{
+					continue;
+				}
+			}
+			
 			var set:ControllerActionSet = { name:actionSetName, localizationKey:"", button:[], analogTrigger:[], stickPadGyro:[] };
 			var actionSetNode = Reflect.field(actionRoot, actionSetName);
 			for (field in Reflect.fields(actionSetNode))
