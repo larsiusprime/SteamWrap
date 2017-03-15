@@ -534,12 +534,17 @@ class Controller
 	private var SteamWrap_ShowAnalogActionOrigins  = Loader.load("SteamWrap_ShowDigitalActionOrigins", "iifffi");
 	
 	
-	private function new(CustomTrace:String->Void) {
+	private function new(CustomTrace:String->Void)
+	{
+		customTrace = CustomTrace;
+		init();
+	}
+	
+	private function init()
+	{
 		#if sys		//TODO: figure out what targets this will & won't work with and upate this guard
 		
 		if (active) return;
-		
-		customTrace = CustomTrace;
 		
 		try {
 			//Old-school CFFI calls:
