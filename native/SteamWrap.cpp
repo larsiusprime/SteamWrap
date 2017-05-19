@@ -14,6 +14,7 @@
 
 #include <steam/steam_api.h>
 
+#pragma region Helpers
 //Thanks to Sven Bergström for these two helper functions:
 inline value bytes_to_hx( const unsigned char* bytes, int byteLength )
 {
@@ -95,9 +96,17 @@ void deleteSteamParamStringArray(SteamParamStringArray_t * params)
 	delete params;
 }
 
+inline value id_to_hx(CSteamID id) {
+	std::ostringstream r;
+	r << id.ConvertToUint64();
+	return alloc_string(r.str().c_str());
+}
 
 AutoGCRoot *g_eventHandler = 0;
 
+#pragma endregion
+
+#pragma region Events & callbacks
 //-----------------------------------------------------------------------------------------------------------
 // Event
 //-----------------------------------------------------------------------------------------------------------
@@ -802,6 +811,8 @@ void CallbackHandler::OnItemInstalled( ItemInstalled_t *pCallback )
 
 //-----------------------------------------------------------------------------------------------------------
 static CallbackHandler* s_callbackHandler = NULL;
+
+#pragma endregion
 
 extern "C"
 {
@@ -1884,6 +1895,7 @@ value SteamWrap_UGCRead(value handle, value bytesToRead, value offset, value rea
 }
 DEFINE_PRIM(SteamWrap_UGCRead,4);
 
+#pragma region Steam Cloud
 //-----------------------------------------------------------------------------------------------------------
 
 //STEAM CLOUD------------------------------------------------------------------------------------------------
@@ -1995,6 +2007,87 @@ value SteamWrap_GetQuota()
 }
 DEFINE_PRIM(SteamWrap_GetQuota,0);
 
+#pragma endregion
+
+#pragma region Steam Networking
+#define SteamNetworking SteamNetworking()
+value SteamWrap_SendPacket(value handle, value haxeBytes, value size, value type) {
+	if (!CheckInit() || !val_is_string(handle) || !val_is_int(size) || !val_is_int(type)) return alloc_bool(false);
+	uint64 u64Handle = strtoull(val_string(handle), NULL, 0);
+	CffiBytes bytes = getByteData(haxeBytes);
+	EP2PSend etype = k_EP2PSendUnreliable;
+	switch ((int32)val_int(type)) {
+		case 1: etype = k_EP2PSendUnreliableNoDelay; break;
+		case 2: etype = k_EP2PSendReliable; break;
+		case 3: etype = k_EP2PSendReliableWithBuffering; break;
+	}
+	if (bytes.data == 0) return alloc_bool(false);
+	return alloc_bool(SteamNetworking->SendP2PPacket(u64Handle, bytes.data, (int32)val_int(size), etype));
+}
+DEFINE_PRIM(SteamWrap_SendPacket, 4);
+
+uint32 SteamWrap_PacketSize = 0;
+value SteamWrap_GetPacketSize() {
+	if (!CheckInit()) return alloc_int(0);
+	return alloc_int(SteamWrap_PacketSize);
+}
+DEFINE_PRIM(SteamWrap_GetPacketSize, 0);
+
+void* SteamWrap_PacketData = nullptr;
+value SteamWrap_GetPacketData() {
+	if (!CheckInit() || SteamWrap_PacketData == nullptr) return alloc_bool(false);
+	return bytes_to_hx((unsigned char*)SteamWrap_PacketData, SteamWrap_PacketSize);
+	/*CffiBytes bytes = getByteData(haxeBytes);
+	if (bytes.data == 0 || bytes.length < SteamWrap_PacketSize) return alloc_bool(false);
+	memcpy(bytes.data, SteamWrap_PacketData, SteamWrap_PacketSize);*/
+}
+DEFINE_PRIM(SteamWrap_GetPacketData, 0);
+
+CSteamID SteamWrap_PacketSender;
+value SteamWrap_GetPacketSender() {
+	if (!CheckInit()) return alloc_string("");
+	return id_to_hx(SteamWrap_PacketSender);
+}
+DEFINE_PRIM(SteamWrap_GetPacketSender, 0);
+
+value SteamWrap_ReceivePacket() {
+	uint32 SteamWrap_PacketSizePre = 0;
+	if (SteamNetworking && SteamNetworking->IsP2PPacketAvailable(&SteamWrap_PacketSizePre)) {
+		// dealloc the current buffer if it's still around:
+		if (SteamWrap_PacketData != nullptr) {
+			free(SteamWrap_PacketData);
+			SteamWrap_PacketData = nullptr;
+		}
+		//
+		SteamWrap_PacketData = malloc(SteamWrap_PacketSizePre);
+		if (SteamNetworking->ReadP2PPacket(
+			SteamWrap_PacketData, SteamWrap_PacketSizePre,
+			&SteamWrap_PacketSize, &SteamWrap_PacketSender)) {
+			return alloc_bool(true);
+		}
+	}
+	return alloc_bool(false);
+}
+DEFINE_PRIM(SteamWrap_ReceivePacket, 0);
+/*int SteamWrap_SendP2PPacket(const char * handle, value haxeBytes, int size, int type) {
+	printf("Bock!\n"); fflush(stdout);
+	if (!CheckInit()) return (4);
+	return (5);
+	uint64 u64Handle = strtoull(handle, NULL, 0);
+	CffiBytes bytes = getByteData(haxeBytes);
+	EP2PSend etype = k_EP2PSendUnreliable;
+	switch ((int32)type) {
+		case 1: etype = k_EP2PSendUnreliableNoDelay; break;
+		case 2: etype = k_EP2PSendReliable; break;
+		case 3: etype = k_EP2PSendReliableWithBuffering; break;
+	}
+	if (bytes.data == 0) return alloc_bool(false);
+	return true || SteamNetworking->SendP2PPacket(u64Handle, bytes.data, size, etype);
+}
+DEFINE_PRIME4(SteamWrap_SendP2PPacket);*/
+#pragma endregion
+
+#pragma region Steam Controller
 //-----------------------------------------------------------------------------------------------------------
 
 //STEAM CONTROLLER-------------------------------------------------------------------------------------------
@@ -2509,6 +2602,8 @@ value SteamWrap_GetControllerMaxAnalogActionData()
 DEFINE_PRIM(SteamWrap_GetControllerMaxAnalogActionData,0);
 
 //-----------------------------------------------------------------------------------------------------------
+
+#pragma endregion
 
 void mylib_main()
 {

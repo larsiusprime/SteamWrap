@@ -62,6 +62,11 @@ class Steam
 	public static var cloud(default, null):Cloud;
 	
 	/**
+	 * The Steam Networking API
+	 */
+	public static var networking(default, null):Networking;
+	
+	/**
 	 * DEPRECATED: The Steam Workshop API, provided here for legacy support. The UGC API supercedes it and is generally preferred.
 	 */
 	public static var workshop(default, null):Workshop;
@@ -153,6 +158,7 @@ class Steam
 			controllers = new Controller(customTrace);
 			cloud = new Cloud(appId, customTrace);
 			workshop = new Workshop(appId, customTrace);
+			networking = new Networking(appId, customTrace);
 		}
 		else {
 			customTrace("Steam failed to activate");
