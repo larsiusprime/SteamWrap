@@ -67,6 +67,11 @@ class Steam
 	public static var networking(default, null):Networking;
 	
 	/**
+	 * Steam Matchmaking API
+	 */
+	public static var matchmaking(default, null):Matchmaking;
+	
+	/**
 	 * DEPRECATED: The Steam Workshop API, provided here for legacy support. The UGC API supercedes it and is generally preferred.
 	 */
 	public static var workshop(default, null):Workshop;
@@ -159,6 +164,7 @@ class Steam
 			cloud = new Cloud(appId, customTrace);
 			workshop = new Workshop(appId, customTrace);
 			networking = new Networking(appId, customTrace);
+			matchmaking = new Matchmaking(appId, customTrace);
 		}
 		else {
 			customTrace("Steam failed to activate");
@@ -468,7 +474,8 @@ class Steam
 	private static function steamWrap_onEvent(e:Dynamic) {
 		var type:String = Std.string(Reflect.field(e, "type"));
 		var success:Bool = (Std.int(Reflect.field(e, "success")) != 0);
-		var data:String = Std.string(Reflect.field(e, "data"));
+		var obj:Dynamic = Reflect.field(e, "data");
+		var data:String = Std.is(obj, String) ? Std.string(obj) : null;
 		
 		customTrace("[STEAM] " + type + (success ? " SUCCESS" : " FAIL") + " (" + data + ")");
 		
@@ -573,6 +580,15 @@ class Steam
 				if (whenQueryUGCRequestSent != null) {
 					var result = SteamUGCQueryCompleted.fromString(data);
 					whenQueryUGCRequestSent(result);
+				}
+				
+			case "LobbyCreated":
+				if (matchmaking.whenLobbyCreated != null) matchmaking.whenLobbyCreated(success);
+			case "LobbyJoined":
+				if (matchmaking.whenLobbyJoined != null) matchmaking.whenLobbyJoined(success);
+			case "LobbyJoinRequested":
+				if (matchmaking.whenLobbyJoinRequested != null) {
+					matchmaking.whenLobbyJoinRequested(obj);
 				}
 		}
 	}

@@ -102,6 +102,13 @@ inline value id_to_hx(CSteamID id) {
 	return alloc_string(r.str().c_str());
 }
 
+inline CSteamID hx_to_id(value hx) {
+	return strtoull(val_string(hx), NULL, 0);
+}
+inline CSteamID hx_to_id(const char* hx) {
+	return strtoull(hx, NULL, 0);
+}
+
 AutoGCRoot *g_eventHandler = 0;
 
 #pragma endregion
@@ -131,6 +138,9 @@ static const char* kEventTypeOnGetPublishedFileDetails = "PublishedFileDetailsGo
 static const char* kEventTypeOnDownloadItem = "ItemDownloaded";
 static const char* kEventTypeOnItemInstalled = "ItemInstalled";
 static const char* kEventTypeOnUGCQueryCompleted = "UGCQueryCompleted";
+static const char* kEventTypeOnLobbyJoined = "LobbyJoinRequested";
+static const char* kEventTypeOnLobbyJoinRequested = "LobbyJoinRequested";
+static const char* kEventTypeOnLobbyCreated = "LobbyCreated";
 
 //A simple data structure that holds on to the native 64-bit handles and maps them to regular ints.
 //This is because it is cumbersome to pass back 64-bit values over CFFI, and strictly speaking, the haxe 
@@ -204,8 +214,11 @@ struct Event
 {
 	const char* m_type;
 	int m_success;
-	std::string m_data;
-	Event(const char* type, bool success=false, const std::string& data="") : m_type(type), m_success(success), m_data(data) {}
+	value m_data;
+	Event(const char* type, bool success=false, const std::string& data="") :
+		m_type(type), m_success(success), m_data(alloc_string(data.c_str())) {}
+	Event(const char* type, bool success, value data) :
+		m_type(type), m_success(success), m_data(data) {}
 };
 
 static void SendEvent(const Event& e)
@@ -215,7 +228,7 @@ static void SendEvent(const Event& e)
     value obj = alloc_empty_object();
     alloc_field(obj, val_id("type"), alloc_string(e.m_type));
     alloc_field(obj, val_id("success"), alloc_int(e.m_success ? 1 : 0));
-    alloc_field(obj, val_id("data"), alloc_string(e.m_data.c_str()));
+    alloc_field(obj, val_id("data"), e.m_data);
     val_call1(g_eventHandler->get(), obj);
 }
 
@@ -260,6 +273,7 @@ public:
 	STEAM_CALLBACK( CallbackHandler, OnGamepadTextInputDismissed, GamepadTextInputDismissed_t, m_CallbackGamepadTextInputDismissed );
 	STEAM_CALLBACK( CallbackHandler, OnDownloadItem, DownloadItemResult_t, m_CallbackDownloadItemResult );
 	STEAM_CALLBACK( CallbackHandler, OnItemInstalled, ItemInstalled_t, m_CallbackItemInstalled );
+	STEAM_CALLBACK( CallbackHandler, OnLobbyJoinRequested, GameLobbyJoinRequested_t );
 	
 	void FindLeaderboard(const char* name);
 	void OnLeaderboardFound( LeaderboardFindResult_t *pResult, bool bIOFailure);
@@ -312,8 +326,17 @@ public:
 	void FileShare(const char* fileName);
 	void OnFileShared( RemoteStorageFileShareResult_t *pResult, bool bIOFailure);
 	CCallResult<CallbackHandler, RemoteStorageFileShareResult_t> m_callResultFileShare;
+
+	void LobbyJoin(CSteamID id);
+	void OnLobbyJoined(LobbyEnter_t* pResult, bool bIOFailure);
+	CCallResult<CallbackHandler, LobbyEnter_t> m_callResultLobbyJoined;
 	
+	void LobbyCreate(int kind, int maxMembers);
+	void OnLobbyCreated(LobbyCreated_t* pResult, bool bIOFailure);
+	CCallResult<CallbackHandler, LobbyCreated_t> m_callResultLobbyCreated;
 };
+
+#pragma region Callback implementations
 
 void CallbackHandler::OnGamepadTextInputDismissed( GamepadTextInputDismissed_t *pCallback )
 {
@@ -809,6 +832,7 @@ void CallbackHandler::OnItemInstalled( ItemInstalled_t *pCallback )
 	SendEvent(Event(kEventTypeOnDownloadItem, true, fileIDStream.str().c_str()));
 }
 
+#pragma endregion
 //-----------------------------------------------------------------------------------------------------------
 static CallbackHandler* s_callbackHandler = NULL;
 
@@ -873,6 +897,7 @@ void SteamWrap_RunCallbacks()
 }
 DEFINE_PRIM(SteamWrap_RunCallbacks, 0);
 
+#pragma region Stats
 //-----------------------------------------------------------------------------------------------------------
 value SteamWrap_RequestStats()
 {
@@ -967,6 +992,9 @@ value SteamWrap_StoreStats()
 }
 DEFINE_PRIM(SteamWrap_StoreStats, 0);
 
+#pragma endregion
+
+#pragma region UGC
 //-----------------------------------------------------------------------------------------------------------
 value SteamWrap_SubmitUGCItemUpdate(value updateHandle, value changeNotes)
 {
@@ -1265,6 +1293,9 @@ int SteamWrap_SetReturnKeyValueTags(const char * handle, int returnKeyValueTags)
 }
 DEFINE_PRIME2(SteamWrap_SetReturnKeyValueTags);
 
+#pragma endregion
+
+#pragma region Scores/Achievements
 //-----------------------------------------------------------------------------------------------------------
 value SteamWrap_SetAchievement(value name)
 {
@@ -1477,6 +1508,9 @@ DEFINE_PRIM(SteamWrap_GetCurrentGameLanguage, 0);
 
 //-----------------------------------------------------------------------------------------------------------
 
+#pragma endregion
+
+#pragma region New Workshop
 //NEW STEAM WORKSHOP---------------------------------------------------------------------------------------------
 
 int SteamWrap_GetNumSubscribedItems(int dummy)
@@ -1787,6 +1821,9 @@ value SteamWrap_GetQueryUGCResult(value sHandle, value iIndex)
 }
 DEFINE_PRIM(SteamWrap_GetQueryUGCResult, 2);
 
+#pragma endregion
+
+#pragma region Old Workshop
 //OLD STEAM WORKSHOP---------------------------------------------------------------------------------------------
 
 value SteamWrap_GetUGCDownloadProgress(value contentHandle)
@@ -1894,6 +1931,8 @@ value SteamWrap_UGCRead(value handle, value bytesToRead, value offset, value rea
 	return returnValue;
 }
 DEFINE_PRIM(SteamWrap_UGCRead,4);
+
+#pragma endregion
 
 #pragma region Steam Cloud
 //-----------------------------------------------------------------------------------------------------------
@@ -2085,6 +2124,111 @@ DEFINE_PRIM(SteamWrap_ReceivePacket, 0);
 	return true || SteamNetworking->SendP2PPacket(u64Handle, bytes.data, size, etype);
 }
 DEFINE_PRIME4(SteamWrap_SendP2PPacket);*/
+#pragma endregion
+
+#pragma region Steam Matchmaking
+
+#pragma region Current lobby
+CSteamID SteamWrap_LobbyID;
+
+value SteamWrap_LeaveLobby() {
+	if (CheckInit() && SteamWrap_LobbyID.IsValid()) {
+		SteamMatchmaking()->LeaveLobby(SteamWrap_LobbyID);
+		SteamWrap_LobbyID.Clear();
+		return alloc_bool(true);
+	} else return alloc_bool(false);
+}
+DEFINE_PRIM(SteamWrap_LeaveLobby, 0);
+
+value SteamWrap_LobbyOwnerID() {
+	if (CheckInit() && SteamWrap_LobbyID.IsValid()) {
+		return id_to_hx(SteamMatchmaking()->GetLobbyOwner(SteamWrap_LobbyID));
+	} else return alloc_string("0");
+}
+DEFINE_PRIM(SteamWrap_LobbyOwnerID, 0);
+
+value SteamWrap_LobbyMemberCount() {
+	if (CheckInit() && SteamWrap_LobbyID.IsValid()) {
+		return alloc_int(SteamMatchmaking()->GetNumLobbyMembers(SteamWrap_LobbyID));
+	} else return alloc_int(0);
+}
+DEFINE_PRIM(SteamWrap_LobbyMemberCount, 0);
+
+value SteamWrap_LobbyMemberID(value index) {
+	if (CheckInit() && val_is_int(index) && SteamWrap_LobbyID.IsValid()) {
+		int i = val_int(index);
+		if (i >= 0 && i < SteamMatchmaking()->GetNumLobbyMembers(SteamWrap_LobbyID)) {
+			return id_to_hx(SteamMatchmaking()->GetLobbyMemberByIndex(SteamWrap_LobbyID, i));
+		}
+	} else return alloc_string("0");
+}
+DEFINE_PRIM(SteamWrap_LobbyMemberID, 0);
+
+value SteamWrap_ActivateInviteOverlay() {
+	if (CheckInit() && SteamFriends() && SteamWrap_LobbyID.IsValid()) {
+		SteamFriends()->ActivateGameOverlayInviteDialog(SteamWrap_LobbyID);
+		return alloc_bool(true);
+	} else return alloc_bool(false);
+}
+DEFINE_PRIM(SteamWrap_ActivateInviteOverlay, 0);
+#pragma endregion
+
+#pragma region Joining lobbies
+
+void CallbackHandler::LobbyJoin(CSteamID id) {
+	SteamAPICall_t hSteamAPICall = SteamMatchmaking()->JoinLobby(id);
+	m_callResultLobbyJoined.Set(hSteamAPICall, this, &CallbackHandler::OnLobbyJoined);
+}
+
+void CallbackHandler::OnLobbyJoined(LobbyEnter_t* pResult, bool bIOFailure) {
+	SteamWrap_LobbyID.SetFromUint64(pResult->m_ulSteamIDLobby);
+	SendEvent(Event(kEventTypeOnLobbyJoined, !bIOFailure, id_to_hx(pResult->m_ulSteamIDLobby)));
+}
+
+bool SteamWrap_JoinLobby(const char* id) {
+	if (!CheckInit() || !SteamMatchmaking()) return false;
+	s_callbackHandler->LobbyJoin(hx_to_id(id));
+	return true;
+}
+DEFINE_PRIME1(SteamWrap_JoinLobby);
+
+void CallbackHandler::OnLobbyJoinRequested(GameLobbyJoinRequested_t* pResult) {
+	value obj = alloc_empty_object();
+	alloc_field(obj, val_id("lobbyID"), id_to_hx(pResult->m_steamIDLobby));
+	alloc_field(obj, val_id("friendID"), id_to_hx(pResult->m_steamIDLobby));
+	SendEvent(Event(kEventTypeOnLobbyJoinRequested, true, obj));
+}
+
+#pragma endregion
+
+#pragma region Making lobbies
+ELobbyType SteamWrap_LobbyType(int32 type) {
+	switch (type) {
+		case 1: return k_ELobbyTypeFriendsOnly;
+		case 2: return k_ELobbyTypePublic;
+		default: return k_ELobbyTypePrivate;
+	}
+}
+
+void CallbackHandler::LobbyCreate(int kind, int maxMembers) {
+	SteamAPICall_t hSteamAPICall = SteamMatchmaking()->CreateLobby(SteamWrap_LobbyType(kind), maxMembers);
+	m_callResultLobbyCreated.Set(hSteamAPICall, this, &CallbackHandler::OnLobbyCreated);
+}
+
+void CallbackHandler::OnLobbyCreated(LobbyCreated_t* pResult, bool bIOFailure) {
+	SteamWrap_LobbyID.SetFromUint64(pResult->m_ulSteamIDLobby);
+	SendEvent(Event(kEventTypeOnLobbyCreated, pResult->m_eResult == k_EResultOK));
+}
+
+bool SteamWrap_CreateLobby(int kind, int maxMembers) {
+	if (!CheckInit() || !SteamMatchmaking()) return false;
+	s_callbackHandler->LobbyCreate(kind, maxMembers);
+	return true;
+}
+DEFINE_PRIME2(SteamWrap_CreateLobby);
+
+#pragma endregion
+
 #pragma endregion
 
 #pragma region Steam Controller

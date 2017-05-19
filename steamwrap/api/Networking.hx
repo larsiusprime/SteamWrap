@@ -11,11 +11,11 @@ import steamwrap.helpers.Loader;
 class Networking extends SteamBase {
 	
 	/**
-	 * 
-	 * @param	id	
-	 * @param	bytes	
-	 * @param	size	
-	 * @param	type	
+	 * Sends a packet to the given endpoint.
+	 * @param	id	Steam ID of endpoint
+	 * @param	bytes	Data to be sent
+	 * @param	size	Number of bytes to be sent (usually, bytes.length)
+	 * @param	type	Determines method of delivery and reliability
 	 * @return	Whether sending succeeded.
 	 */
 	public function sendPacket(id:String, bytes:Bytes, size:Int, type:EP2PSend):Int {
@@ -25,19 +25,25 @@ class Networking extends SteamBase {
 	private var SteamWrap_SendPacket = Loader.loadRaw("SteamWrap_SendPacket", 4);
 	
 	/**
-	 * Pulls the next packet out of receive queue
-	 * @return
+	 * Pulls the next packet out of receive queue, returns whether there was one.
+	 * If successful, also fills out data for getPacketData/getPacketSender.
 	 */
 	public function receivePacket():Bool {
 		return SteamWrap_ReceivePacket();
 	}
 	private var SteamWrap_ReceivePacket = Loader.loadRaw("SteamWrap_ReceivePacket", 0);
 	
+	/**
+	 * Returns the data of the last receives packet as Bytes.
+	 */
 	public function getPacketData():Bytes {
 		return Bytes.ofData(SteamWrap_GetPacketData());
 	}
 	private var SteamWrap_GetPacketData = Loader.loadRaw("SteamWrap_GetPacketData", 0);
 	
+	/**
+	 * Returns Steam ID of sender of the last received packet.
+	 */
 	public function getPacketSender():String {
 		return SteamWrap_GetPacketSender();
 	}
