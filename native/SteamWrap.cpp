@@ -113,6 +113,32 @@ AutoGCRoot *g_eventHandler = 0;
 
 #pragma endregion
 
+#pragma region Macros
+// Sets up a default return value and checks for init-exit.
+#define swp_start(defValue)\
+	value __defValue__ = defValue;\
+	if (!CheckInit()) return __defValue__;
+// Requires condition to be met for function to proceed.
+#define swp_req(expr) if (!(expr)) return __defValue__;
+// Sets up and checks for an int parameter.
+#define swp_int(name, value)\
+	if (!val_is_int(value)) {\
+		hx_failure("Expected " #name " to be an int.");\
+		return __defValue__;\
+	};\
+	int name = val_int(value);
+// Sets up and checks for a string parameter.
+#define swp_string(name, value)\
+	if (!val_is_string(value)) {\
+		hx_failure("Expected " #name " to be a string.");\
+		return __defValue__;\
+	};\
+	auto name = val_string(value);
+// Default/blank Steam ID
+#define val_noid alloc_string("0")
+
+#pragma endregion
+
 #pragma region Events & callbacks
 //-----------------------------------------------------------------------------------------------------------
 // Event
@@ -141,6 +167,7 @@ static const char* kEventTypeOnUGCQueryCompleted = "UGCQueryCompleted";
 static const char* kEventTypeOnLobbyJoined = "LobbyJoinRequested";
 static const char* kEventTypeOnLobbyJoinRequested = "LobbyJoinRequested";
 static const char* kEventTypeOnLobbyCreated = "LobbyCreated";
+static const char* kEventTypeOnLobbyListReceived = "LobbyListReceived";
 
 //A simple data structure that holds on to the native 64-bit handles and maps them to regular ints.
 //This is because it is cumbersome to pass back 64-bit values over CFFI, and strictly speaking, the haxe 
@@ -334,6 +361,10 @@ public:
 	void LobbyCreate(int kind, int maxMembers);
 	void OnLobbyCreated(LobbyCreated_t* pResult, bool bIOFailure);
 	CCallResult<CallbackHandler, LobbyCreated_t> m_callResultLobbyCreated;
+
+	void LobbyListRequest();
+	void OnLobbyListReceived(LobbyMatchList_t* pResult, bool bIOFailure);
+	CCallResult<CallbackHandler, LobbyMatchList_t> m_callResultLobbyListReceived;
 };
 
 #pragma region Callback implementations
@@ -2076,9 +2107,6 @@ void* SteamWrap_PacketData = nullptr;
 value SteamWrap_GetPacketData() {
 	if (!CheckInit() || SteamWrap_PacketData == nullptr) return alloc_bool(false);
 	return bytes_to_hx((unsigned char*)SteamWrap_PacketData, SteamWrap_PacketSize);
-	/*CffiBytes bytes = getByteData(haxeBytes);
-	if (bytes.data == 0 || bytes.length < SteamWrap_PacketSize) return alloc_bool(false);
-	memcpy(bytes.data, SteamWrap_PacketData, SteamWrap_PacketSize);*/
 }
 DEFINE_PRIM(SteamWrap_GetPacketData, 0);
 
@@ -2132,37 +2160,45 @@ DEFINE_PRIME4(SteamWrap_SendP2PPacket);*/
 CSteamID SteamWrap_LobbyID;
 
 value SteamWrap_LeaveLobby() {
-	if (CheckInit() && SteamWrap_LobbyID.IsValid()) {
-		SteamMatchmaking()->LeaveLobby(SteamWrap_LobbyID);
-		SteamWrap_LobbyID.Clear();
-		return alloc_bool(true);
-	} else return alloc_bool(false);
+	swp_start(val_false);
+	swp_req(SteamWrap_LobbyID.IsValid());
+	SteamMatchmaking()->LeaveLobby(SteamWrap_LobbyID);
+	SteamWrap_LobbyID.Clear();
+	return val_true;
 }
 DEFINE_PRIM(SteamWrap_LeaveLobby, 0);
 
+value SteamWrap_LobbyID_() {
+	swp_start(val_noid);
+	return id_to_hx(SteamWrap_LobbyID);
+}
+DEFINE_PRIM(SteamWrap_LobbyID_, 0);
+
 value SteamWrap_LobbyOwnerID() {
-	if (CheckInit() && SteamWrap_LobbyID.IsValid()) {
-		return id_to_hx(SteamMatchmaking()->GetLobbyOwner(SteamWrap_LobbyID));
-	} else return alloc_string("0");
+	swp_start(val_noid); swp_req(SteamWrap_LobbyID.IsValid());
+	return id_to_hx(SteamMatchmaking()->GetLobbyOwner(SteamWrap_LobbyID));
 }
 DEFINE_PRIM(SteamWrap_LobbyOwnerID, 0);
 
 value SteamWrap_LobbyMemberCount() {
-	if (CheckInit() && SteamWrap_LobbyID.IsValid()) {
-		return alloc_int(SteamMatchmaking()->GetNumLobbyMembers(SteamWrap_LobbyID));
-	} else return alloc_int(0);
+	swp_start(alloc_int(0)); swp_req(SteamWrap_LobbyID.IsValid());
+	return alloc_int(SteamMatchmaking()->GetNumLobbyMembers(SteamWrap_LobbyID));
 }
 DEFINE_PRIM(SteamWrap_LobbyMemberCount, 0);
 
 value SteamWrap_LobbyMemberID(value index) {
-	if (CheckInit() && val_is_int(index) && SteamWrap_LobbyID.IsValid()) {
-		int i = val_int(index);
-		if (i >= 0 && i < SteamMatchmaking()->GetNumLobbyMembers(SteamWrap_LobbyID)) {
-			return id_to_hx(SteamMatchmaking()->GetLobbyMemberByIndex(SteamWrap_LobbyID, i));
-		}
-	} else return alloc_string("0");
+	swp_start(val_noid); swp_int(i, index);
+	swp_req(SteamWrap_LobbyID.IsValid() && i >= 0 && i < SteamMatchmaking()->GetNumLobbyMembers(SteamWrap_LobbyID));
+	return id_to_hx(SteamMatchmaking()->GetLobbyMemberByIndex(SteamWrap_LobbyID, i));
 }
-DEFINE_PRIM(SteamWrap_LobbyMemberID, 0);
+DEFINE_PRIM(SteamWrap_LobbyMemberID, 1);
+
+value SteamWrap_LobbySetData(value field, value data) {
+	if (CheckInit() && val_is_string(field) && val_is_string(data) && SteamWrap_LobbyID.IsValid()) {
+		return alloc_bool(SteamMatchmaking()->SetLobbyData(SteamWrap_LobbyID, val_string(field), val_string(data)));
+	} else return alloc_bool(false);
+}
+DEFINE_PRIM(SteamWrap_LobbySetData, 2);
 
 value SteamWrap_ActivateInviteOverlay() {
 	if (CheckInit() && SteamFriends() && SteamWrap_LobbyID.IsValid()) {
@@ -2171,6 +2207,111 @@ value SteamWrap_ActivateInviteOverlay() {
 	} else return alloc_bool(false);
 }
 DEFINE_PRIM(SteamWrap_ActivateInviteOverlay, 0);
+#pragma endregion
+
+#pragma region Lobby list
+std::vector<CSteamID> SteamWrap_LobbyList;
+
+value SteamWrap_LobbyListLength() {
+	return alloc_int(SteamWrap_LobbyList.size());
+}
+DEFINE_PRIM(SteamWrap_LobbyListLength, 0);
+
+value SteamWrap_LobbyListGetID(value index) {
+	swp_start(val_noid); swp_int(i, index);
+	swp_req(i >= 0 && i < SteamWrap_LobbyList.size());
+	return id_to_hx(SteamWrap_LobbyList[i]);
+}
+DEFINE_PRIM(SteamWrap_LobbyListGetID, 1);
+
+value SteamWrap_LobbyListGetData(value index, value field) {
+	swp_start(alloc_string("")); swp_int(i, index); swp_string(s, field);
+	swp_req(i >= 0 && i < SteamWrap_LobbyList.size());
+	return alloc_string(SteamMatchmaking()->GetLobbyData(SteamWrap_LobbyList[i], val_string(field)));
+}
+DEFINE_PRIM(SteamWrap_LobbyListGetData, 2);
+
+bool SteamWrap_LobbyListLoading = false;
+value SteamWrap_LobbyListIsLoading() {
+	return alloc_bool(SteamWrap_LobbyListLoading);
+}
+DEFINE_PRIM(SteamWrap_LobbyListIsLoading, 0);
+
+void CallbackHandler::LobbyListRequest() {
+	SteamWrap_LobbyListLoading = true;
+	SteamAPICall_t hSteamAPICall = SteamMatchmaking()->RequestLobbyList();
+	m_callResultLobbyListReceived.Set(hSteamAPICall, this, &CallbackHandler::OnLobbyListReceived);
+}
+
+void CallbackHandler::OnLobbyListReceived(LobbyMatchList_t* pResult, bool bIOFailure) {
+	auto found = pResult->m_nLobbiesMatching;
+	SteamWrap_LobbyList.resize(found);
+	for (uint32 i = 0; i < found; i++) {
+		SteamWrap_LobbyList[i] = SteamMatchmaking()->GetLobbyByIndex(i);
+	}
+	SteamWrap_LobbyListLoading = false;
+	SendEvent(Event(kEventTypeOnLobbyListReceived, !bIOFailure, alloc_int(found)));
+}
+
+value SteamWrap_RequestLobbyList() {
+	swp_start(val_false); swp_req(SteamMatchmaking());
+	s_callbackHandler->LobbyListRequest();
+	return val_true;
+}
+DEFINE_PRIM(SteamWrap_RequestLobbyList, 0);
+
+#pragma endregion
+
+#pragma region Lobby list filters
+ELobbyComparison SteamWrap_LobbyCmp(int32 filter) {
+	switch (filter) {
+		case -2: return k_ELobbyComparisonEqualToOrLessThan;
+		case -1: return k_ELobbyComparisonLessThan;
+		case  1: return k_ELobbyComparisonGreaterThan;
+		case  2: return k_ELobbyComparisonEqualToOrGreaterThan;
+		case  3: return k_ELobbyComparisonNotEqual;
+		default: return k_ELobbyComparisonEqual;
+	}
+}
+
+value SteamWrap_LobbyListAddStringFilter(value field, value data, value cmp) {
+	swp_start(val_false); swp_string(s, field); swp_string(v, data); swp_int(c, cmp);
+	swp_req(SteamMatchmaking());
+	SteamMatchmaking()->AddRequestLobbyListStringFilter(s, v, SteamWrap_LobbyCmp(c));
+	return val_true;
+}
+DEFINE_PRIM(SteamWrap_LobbyListAddStringFilter, 3);
+
+value SteamWrap_LobbyListAddNumericalFilter(value field, value data, value cmp) {
+	swp_start(val_false); swp_string(s, field); swp_int(v, data); swp_int(c, cmp);
+	swp_req(SteamMatchmaking());
+	SteamMatchmaking()->AddRequestLobbyListNumericalFilter(s, v, SteamWrap_LobbyCmp(c));
+	return val_true;
+}
+DEFINE_PRIM(SteamWrap_LobbyListAddNumericalFilter, 3);
+
+value SteamWrap_LobbyListAddNearFilter(value field, value data) {
+	swp_start(val_false); swp_string(s, field); swp_int(v, data);
+	swp_req(SteamMatchmaking());
+	SteamMatchmaking()->AddRequestLobbyListNearValueFilter(s, v);
+	return val_true;
+}
+DEFINE_PRIM(SteamWrap_LobbyListAddNearFilter, 2);
+
+value SteamWrap_LobbyListAddDistanceFilter(value mode) {
+	swp_start(val_false); swp_int(m, mode);
+	swp_req(SteamMatchmaking());
+	ELobbyDistanceFilter d = k_ELobbyDistanceFilterDefault;
+	switch (m) {
+		case 0: d = k_ELobbyDistanceFilterClose; break;
+		case 1: d = k_ELobbyDistanceFilterDefault; break;
+		case 2: d = k_ELobbyDistanceFilterFar; break;
+		case 3: d = k_ELobbyDistanceFilterWorldwide; break;
+	}
+	SteamMatchmaking()->AddRequestLobbyListDistanceFilter(d);
+	return val_true;
+}
+DEFINE_PRIM(SteamWrap_LobbyListAddDistanceFilter, 1);
 #pragma endregion
 
 #pragma region Joining lobbies
@@ -2186,9 +2327,9 @@ void CallbackHandler::OnLobbyJoined(LobbyEnter_t* pResult, bool bIOFailure) {
 }
 
 bool SteamWrap_JoinLobby(const char* id) {
-	if (!CheckInit() || !SteamMatchmaking()) return false;
+	if (!CheckInit() || !SteamMatchmaking()) return alloc_bool(false);
 	s_callbackHandler->LobbyJoin(hx_to_id(id));
-	return true;
+	return alloc_bool(true);
 }
 DEFINE_PRIME1(SteamWrap_JoinLobby);
 
@@ -2226,6 +2367,13 @@ bool SteamWrap_CreateLobby(int kind, int maxMembers) {
 	return true;
 }
 DEFINE_PRIME2(SteamWrap_CreateLobby);
+
+bool SteamWrap_SetLobbyType(int type) {
+	if (CheckInit() && SteamWrap_LobbyID.IsValid()) {
+		return SteamMatchmaking()->SetLobbyType(SteamWrap_LobbyID, SteamWrap_LobbyType(type));
+	} else return false;
+}
+DEFINE_PRIME1(SteamWrap_SetLobbyType);
 
 #pragma endregion
 
