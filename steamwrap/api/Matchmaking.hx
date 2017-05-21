@@ -46,7 +46,7 @@ class Matchmaking extends SteamBase {
 	public function joinLobby(id:SteamID):Bool {
 		return SteamWrap_JoinLobby(id);
 	}
-	private var SteamWrap_JoinLobby = Loader.load("SteamWrap_JoinLobby", "cb");
+	private var SteamWrap_JoinLobby = Loader.loadRaw("SteamWrap_JoinLobby", 1);
 	
 	/**
 	 * Leaves the current lobby, if any.
@@ -213,7 +213,7 @@ class Matchmaking extends SteamBase {
 @:enum abstract LobbyType(Int) {
 	public var PRIVATE = 0;
 	public var FRIENDS_ONLY = 1;
-	public var PUBLIC = 1;
+	public var PUBLIC = 2;
 }
 
 @:enum abstract LobbyCmp(Int) {

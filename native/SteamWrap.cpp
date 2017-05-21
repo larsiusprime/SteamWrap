@@ -2326,10 +2326,11 @@ void CallbackHandler::OnLobbyJoined(LobbyEnter_t* pResult, bool bIOFailure) {
 	SendEvent(Event(kEventTypeOnLobbyJoined, !bIOFailure, id_to_hx(pResult->m_ulSteamIDLobby)));
 }
 
-bool SteamWrap_JoinLobby(const char* id) {
-	if (!CheckInit() || !SteamMatchmaking()) return alloc_bool(false);
+value SteamWrap_JoinLobby(value id) {
+	swp_start(val_false); swp_string(q, id);
+	swp_req(SteamMatchmaking());
 	s_callbackHandler->LobbyJoin(hx_to_id(id));
-	return alloc_bool(true);
+	return val_true;
 }
 DEFINE_PRIME1(SteamWrap_JoinLobby);
 
