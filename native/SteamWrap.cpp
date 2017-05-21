@@ -2337,7 +2337,7 @@ DEFINE_PRIME1(SteamWrap_JoinLobby);
 void CallbackHandler::OnLobbyJoinRequested(GameLobbyJoinRequested_t* pResult) {
 	value obj = alloc_empty_object();
 	alloc_field(obj, val_id("lobbyID"), id_to_hx(pResult->m_steamIDLobby));
-	alloc_field(obj, val_id("friendID"), id_to_hx(pResult->m_steamIDLobby));
+	alloc_field(obj, val_id("friendID"), id_to_hx(pResult->m_steamIDFriend));
 	SendEvent(Event(kEventTypeOnLobbyJoinRequested, true, obj));
 }
 
