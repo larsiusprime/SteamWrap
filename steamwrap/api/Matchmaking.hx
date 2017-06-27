@@ -3,7 +3,8 @@ import steamwrap.helpers.Loader;
 import steamwrap.helpers.SteamBase;
 
 /**
- * ...
+ * Wraps parts of Steam Matchmaking API.
+ * For sake of simplicity, only one "current" lobby is tracked per player.
  * @author YellowAfterlife
  */
 @:allow(steamwrap.api.Steam)
@@ -204,15 +205,29 @@ class Matchmaking extends SteamBase {
 }
 
 @:enum abstract LobbyDistanceFilter(Int) {
+	
+	/** Show lobbies from roughly the same/adjacent country */
 	public var NEAR = 0;
+	
+	/** Show lobbies from roughly the same region */
 	public var DEFAULT = 1;
+	
+	/** Show lobbies from roughly the same continent */ 
 	public var FAR = 2;
+	
+	/** Show lobbies from anywhere (note: very high latencies possible) */
 	public var WORLDWIDE = 3;
 }
 
 @:enum abstract LobbyType(Int) {
+	
+	/** Can only be joined by invitation */
 	public var PRIVATE = 0;
+	
+	/** Can be joined by invitation and via friends-list (user options - "Join game") */
 	public var FRIENDS_ONLY = 1;
+	
+	/** Can be joined by invitation, friends-list, and shows up in public lobby list */
 	public var PUBLIC = 2;
 }
 

@@ -24,6 +24,10 @@ class Loader
 	public static var loadErrors:Array<String> = [];
 	#if !macro
 	private static function fallback() { }
+	/**
+	 * Attempts to load a function from SteamWrap C++ library.
+	 * If that fails, logs the error and returns a fallback function to reduce the odds of hard crashing on call to a broken function.
+	 */
 	public static function loadRaw(name:String, argc:Int):Dynamic {
 		try {
 			var r = cpp.Lib.load("steamwrap", name, argc);

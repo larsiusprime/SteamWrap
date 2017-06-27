@@ -4,7 +4,8 @@ import steamwrap.helpers.SteamBase;
 import steamwrap.helpers.Loader;
 
 /**
- * ...
+ * Selective wrapper for Steam networking API.
+ * (implementing P2P session API is not required)
  * @author YellowAfterlife
  */
 @:allow(steamwrap.api.Steam)
@@ -58,8 +59,17 @@ class Networking extends SteamBase {
 }
 
 @:enum abstract EP2PSend(Int) {
+	
+	/** Akin to UDP */
 	public var UNRELIABLE = 0;
+	
+	/** Akin to UDP with instant send flag */
 	public var UNRELIABLE_NO_DELAY = 1;
+	
+	/** Akin to TCP */
 	public var RELIABLE = 2;
+	
+	/** Akin to TCP with Nagle's algorithm*/
 	public var RELIABLE_WITH_BUFFERING = 3;
+	
 }
