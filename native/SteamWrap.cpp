@@ -1916,7 +1916,7 @@ DEFINE_PRIME1(SteamWrap_FileExists);
 value SteamWrap_FileRead(value fileName)
 {
 	if (!val_is_string(fileName) || !CheckInit())
-		return alloc_int(0);
+		return alloc_null();
 	
 	const char * fName = val_string(fileName);
 	
@@ -1928,8 +1928,7 @@ value SteamWrap_FileRead(value fileName)
 	char *bytesData = (char *)malloc(length);
 	int32 result = SteamRemoteStorage()->FileRead(fName, bytesData, length);
 	
-	value returnValue = alloc_string(bytesData);
-	
+	value returnValue = alloc_string_len(bytesData, length);
 	free(bytesData);
 	return returnValue;
 }

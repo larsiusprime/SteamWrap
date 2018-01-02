@@ -25,19 +25,23 @@ class Cloud
 	//TODO: these all need documentation headers
 	
 	public function GetFileCount():Int {
+		if (!active) return 0;
 		return SteamWrap_GetFileCount.call(0);
 	}
 	
 	public function FileExists(name:String):Bool {
+		if (!active) return false;
 		return SteamWrap_FileExists.call(name) == 1;
 	}
 	
 	public function GetFileSize(name:String):Int {
+		if (!active) return 0;
 		return SteamWrap_GetFileSize.call(name);
 	}
 	
 	public function GetQuota():{total:Int, available:Int}
 	{
+		if (!active) return {total:0, available:0};
 		var str:String = SteamWrap_GetQuota();
 		var arr = str.split(",");
 		if (arr != null && arr.length == 2)
@@ -53,6 +57,7 @@ class Cloud
 	
 	public function FileRead(name:String):String
 	{
+		if (!active) return null;
 		if (!FileExists(name))
 		{
 			return null;
@@ -62,24 +67,29 @@ class Cloud
 	}
 	
 	public function FileShare(name:String) {
+		if (!active) return;
 		SteamWrap_FileShare.call(name);
 	}
 	
 	public function FileWrite(name:String, data:Bytes):Void
 	{
+		if (!active) return;
 		SteamWrap_FileWrite(name, data);
 	}
 	
 	public function FileDelete(name:String):Bool {
+		if (!active) return false;
 		return SteamWrap_FileDelete.call(name) == 1;
 	}
 	
 	public function IsCloudEnabledForApp():Bool {
+		if (!active) return false;
 		return SteamWrap_IsCloudEnabledForApp.call(0) == 1;
 	}
 	
 	public function SetCloudEnabledForApp(b:Bool):Void {
 		var i = b ? 1 : 0;
+		if (!active) return;
 		SteamWrap_SetCloudEnabledForApp.call(i);
 	}
 	

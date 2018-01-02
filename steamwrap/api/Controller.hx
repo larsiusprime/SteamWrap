@@ -386,7 +386,7 @@ class Controller
 		if (leftSpeed > 65535) leftSpeed = 65535;
 		if (rightSpeed < 0) rightSpeed = 0;
 		if (rightSpeed > 65535) rightSpeed = 65535;
-		SteamWrap_TriggerVibration(controller, leftSpeed, rightSpeed);
+		SteamWrap_TriggerVibration.call(controller, leftSpeed, rightSpeed);
 		
 	}
 	
@@ -401,12 +401,12 @@ class Controller
 		var r = (rgb >> 16) & 0xFF;
 		var g = (rgb >> 8) & 0xFF;
 		var b = rgb & 0xFF;
-		SteamWrap_SetLEDColor(controller, r, g, b, flags);
+		SteamWrap_SetLEDColor.call(controller, r, g, b, flags);
 		
 	}
 	
 	public function resetLEDColor(controller:Int) {
-		SteamWrap_SetLEDColor(controller, 0, 0, 0, ESteamControllerLEDFlags.RESTORE_USER_DEFAULT);
+		SteamWrap_SetLEDColor.call(controller, 0, 0, 0, ESteamControllerLEDFlags.RESTORE_USER_DEFAULT);
 	}
 	
 	
