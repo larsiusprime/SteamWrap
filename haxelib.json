@@ -8,6 +8,5 @@
  "releasenote": "Initial Release",
  "contributors": ["dukope,grapefrukt,sharkpunch,larsiusprime"],
  "dependencies": { 
-  "hxcpp": ""
  }
 }
