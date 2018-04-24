@@ -531,7 +531,7 @@ class Controller
 		private var SteamWrap_GetMotionData_rotVelY =   Loader.load("SteamWrap_GetMotionData_rotVelY", "ii");
 		private var SteamWrap_GetMotionData_rotVelZ =   Loader.load("SteamWrap_GetMotionData_rotVelZ", "ii");
 	private var SteamWrap_ShowDigitalActionOrigins = Loader.load("SteamWrap_ShowDigitalActionOrigins", "iifffi");
-	private var SteamWrap_ShowAnalogActionOrigins  = Loader.load("SteamWrap_ShowDigitalActionOrigins", "iifffi");
+	private var SteamWrap_ShowAnalogActionOrigins  = Loader.load("SteamWrap_ShowAnalogActionOrigins", "iifffi");
 	
 	
 	private function new(CustomTrace:String->Void)
