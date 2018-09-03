@@ -39,8 +39,11 @@
 	<lib name="lib/osx32/libsteam_api.dylib" if="macos HXCPP_M32" />
 	<outdir name="../ndll/Mac" if="macos HXCPP_M32" />
 
-	<lib name="lib/win32/steam_api.lib" if="windows"/>
-	<outdir name="../ndll/Windows" if="windows" />
+	<lib name="lib/win64/steam_api64.lib" if="windows HXCPP_M64"/>
+	<outdir name="../ndll/Windows64" if="windows HXCPP_M64" />
+	
+	<lib name="lib/win32/steam_api.lib" if="windows HXCPP_M32"/>
+	<outdir name="../ndll/Windows" if="windows HXCPP_M32" />
 </target>
 
 <!-- this node is duplicated for linux because i couldn't get <section> tags to work OR use multiple if conditions -->
