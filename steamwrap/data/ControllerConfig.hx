@@ -255,11 +255,11 @@ class ControllerConfig
 }
 
 typedef ControllerActionSet = {
-	private var name:String;
-	private var localizationKey:String;
-	private var button:Array<ButtonAction>;
-	private var analogTrigger:Array<AnalogTriggerAction>;
-	private var stickPadGyro:Array<StickPadGyroAction>;
+	var name:String;
+	var localizationKey:String;
+	var button:Array<ButtonAction>;
+	var analogTrigger:Array<AnalogTriggerAction>;
+	var stickPadGyro:Array<StickPadGyroAction>;
 };
 
 //typedef ControllerAction = OneOfThree<ButtonAction,AnalogTriggerAction,StickPadGyroAction>;
