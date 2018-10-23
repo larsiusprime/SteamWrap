@@ -129,9 +129,9 @@ Or you can set it up manually:
 1. Run the "build" script (it's a basic haxelib command shortcut). 
 	steamwrap.ndll will be output to ndll/[PLATFORM]
 
-  Note: For linux you should have `g++-multilib` installed.
+Note: For linux you should have `g++-multilib` installed.
   
-	That's great, but we want to make sure it works! Let's run something with it. If you run the Test program now, you'll notice it exits immediately, asking you to supply an app ID.
+That's great, but we want to make sure it works! Let's run something with it. If you run the Test program now, you'll notice it exits immediately, asking you to supply an app ID.
 
 2. Edit steamwrap/example/Test.hx to include your Steam App ID and achievement ID's, etc.
 
