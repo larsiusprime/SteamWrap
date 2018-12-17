@@ -5,7 +5,18 @@
 /native/all_objs
 /native/*.pdb
 /obj
-/ndll
 temp/
 
 temp64/
+
+ndll/Windows/Windows\.zip
+
+ndll/Windows64/steam_appid\.txt
+
+ndll/Windows64/steamwrap\.ndll\.hash
+
+ndll/Windows64/Windows64\.zip
+
+ndll/Windows/steam_appid\.txt
+
+ndll/Windows/steamwrap\.ndll\.hash
