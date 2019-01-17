@@ -668,8 +668,6 @@ class LeaderboardScore {
 
 	public static function fromString(str:String):LeaderboardScore {
 		var tokens = str.split(",");
-		if (tokens.length == 4)
-			return new LeaderboardScore(tokens[0], Std.parseInt(tokens[1]), Std.parseInt(tokens[2]), Std.parseInt(tokens[3]));
 		
 		if (tokens.length == 5)
 			return new LeaderboardScore(tokens[0], Std.string(tokens[1]), Std.parseInt(tokens[2]), Std.parseInt(tokens[3]), Std.parseInt(tokens[4]));
