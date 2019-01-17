@@ -1397,6 +1397,23 @@ value SteamWrap_GetPersonaName()
 }
 DEFINE_PRIM(SteamWrap_GetPersonaName, 0);
 
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_BIsAppInstalled(value appID)
+{
+	if(!val_is_int(appID) || !CheckInit()) return alloc_bool(false);
+	bool result = SteamApps()->BIsAppInstalled(val_int(appID));
+	return alloc_bool(result);
+}
+DEFINE_PRIM(SteamWrap_BIsAppInstalled, 1);
+
+//-----------------------------------------------------------------------------------------------------------
+value SteamWrap_BIsDlcInstalled(value appID)
+{
+	if(!val_is_int(appID) || !CheckInit()) return alloc_bool(false);
+	bool result = SteamApps()->BIsDlcInstalled(val_int(appID));
+	return alloc_bool(result);
+}
+DEFINE_PRIM(SteamWrap_BIsDlcInstalled, 1);
 
 //-----------------------------------------------------------------------------------------------------------
 value SteamWrap_GetSteamID()

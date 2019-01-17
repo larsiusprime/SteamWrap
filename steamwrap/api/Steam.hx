@@ -133,6 +133,8 @@ class Steam
 			SteamWrap_RequestGlobalStats = cpp.Lib.load("steamwrap", "SteamWrap_RequestGlobalStats", 0);
 			SteamWrap_RestartAppIfNecessary = cpp.Lib.load("steamwrap", "SteamWrap_RestartAppIfNecessary", 1);
 			SteamWrap_OpenOverlay = cpp.Lib.load("steamwrap", "SteamWrap_OpenOverlay", 1);
+			SteamWrap_BIsAppInstalled = cpp.Lib.load("steamwrap", "SteamWrap_BIsAppInstalled", 1);
+			SteamWrap_BIsDlcInstalled = cpp.Lib.load("steamwrap", "SteamWrap_BIsDlcInstalled", 1);
 		}
 		catch (e:Dynamic) {
 			customTrace("Running non-Steam version (" + e + ")");
@@ -283,6 +285,18 @@ class Steam
 	
 	public static function indicateAchievementProgress(id:String, curProgress:Int, maxProgress:Int):Bool {
 		return active && report("indicateAchivevementProgress", [id, Std.string(curProgress), Std.string(maxProgress)], SteamWrap_IndicateAchievementProgress(id, curProgress, maxProgress));
+	}
+	
+	public static function isAppInstalled(appId:Int):Bool {
+		if (!active)
+			return false;
+		return SteamWrap_BIsAppInstalled(appId);
+	}
+	
+	public static function isDlcInstalled(appID:Int):Bool {
+		if (!active)
+			return false;
+		return SteamWrap_BIsDlcInstalled(appId);
 	}
 	
 	public static function isOverlayEnabled():Bool {
@@ -603,6 +617,8 @@ class Steam
 	private static var SteamWrap_IsSteamRunning:Dynamic;
 	private static var SteamWrap_GetCurrentGameLanguage:Dynamic;
 	private static var SteamWrap_OpenOverlay:Dynamic;
+	private static var SteamWrap_BIsAppInstalled:Dynamic;
+	private static var SteamWrap_BIsDlcInstalled:Dynamic;
 }
 
 class LeaderboardScore {
