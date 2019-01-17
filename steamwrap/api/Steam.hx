@@ -15,7 +15,15 @@ private enum LeaderboardOp
 {
 	FIND(id:String);
 	UPLOAD(score:LeaderboardScore);
-	DOWNLOAD(id:String);
+	DOWNLOAD(id:String, downloadType:LeaderboardDownloadType, numBefore:Int, numAfter:Int);
+}
+
+@:enum
+abstract LeaderboardDownloadType(Int) to Int 
+{
+	var Global = 0;
+	var AroundUser = 1;
+	var AllFriends = 2;
 }
 
 @:enum
@@ -80,7 +88,7 @@ class Steam
 
 	public static var whenGamepadTextInputDismissed:String->Void;
 	public static var whenAchievementStored:String->Void;
-	public static var whenLeaderboardScoreDownloaded:LeaderboardScore->Void;
+	public static var whenLeaderboardScoreDownloaded:Array<LeaderboardScore>->Void;
 	public static var whenLeaderboardScoreUploaded:LeaderboardScore->Void;
 	public static var whenTrace:String->Void;
 	public static var whenUGCItemIdReceived:String->Void;
@@ -112,7 +120,7 @@ class Steam
 		
 		try {
 			SteamWrap_ClearAchievement = cpp.Lib.load("steamwrap", "SteamWrap_ClearAchievement", 1);
-			SteamWrap_DownloadScores = cpp.Lib.load("steamwrap", "SteamWrap_DownloadScores", 3);
+			SteamWrap_DownloadScores = cpp.Lib.load("steamwrap", "SteamWrap_DownloadScores", 4);
 			SteamWrap_FindLeaderboard = cpp.Lib.load("steamwrap", "SteamWrap_FindLeaderboard", 1);
 			SteamWrap_GetCurrentGameLanguage = cpp.Lib.load("steamwrap", "SteamWrap_GetCurrentGameLanguage", 0);
 			SteamWrap_GetGlobalStat = cpp.Lib.load("steamwrap", "SteamWrap_GetGlobalStat", 1);
@@ -188,11 +196,18 @@ class Steam
 		return active && report("clearAchievement", [id], SteamWrap_ClearAchievement(id));
 	}
 	
-	public static function downloadLeaderboardScore(id:String):Bool {
+	/**
+	 * Downloads score(s) for a given leaderboard ID.
+	 * @param	id	The leaderboard ID to retreive from.
+	 * @param	downloadType	What kind of scores to download. See https://partner.steamgames.com/documentation/leaderboards#retrieve for details.
+	 * @param	numBefore	The amount of scores to download before the user's current score for AroundUser, and the upper global ranking for Global (e.g. #1 to #5 would be 1)
+	 * @param	numAfter	The amount of scores to download after the user's current score for AroundUser, and the lower global ranking for Global (e.g. #1 to #5 would be 5)
+	 */
+	public static function downloadLeaderboardScore(id:String, downloadType:LeaderboardDownloadType = LeaderboardDownloadType.AroundUser, numBefore:Int = 0, numAfter:Int = 0):Bool {
 		if (!active) return false;
 		var startProcessingNow = (leaderboardOps.length == 0);
 		findLeaderboardIfNecessary(id);
-		leaderboardOps.add(LeaderboardOp.DOWNLOAD(id));
+		leaderboardOps.add(LeaderboardOp.DOWNLOAD(id, downloadType, numBefore, numAfter));
 		if (startProcessingNow) processNextLeaderboardOp();
 		return true;
 	}
@@ -473,8 +488,8 @@ class Steam
 			case UPLOAD(score):
 				if (!report("Leaderboard.UPLOAD", [score.toString()], SteamWrap_UploadScore(score.leaderboardId, score.score, score.detail)))
 					processNextLeaderboardOp();
-			case DOWNLOAD(id):
-				if (!report("Leaderboard.DOWNLOAD", [id], SteamWrap_DownloadScores(id, 0, 0)))
+			case DOWNLOAD(id, downloadType, numBefore, numAfter):
+				if (!report("Leaderboard.DOWNLOAD", [id, Std.string(downloadType), Std.string(numBefore), Std.string(numAfter)], SteamWrap_DownloadScores(id, downloadType, numBefore, numAfter)))
 					processNextLeaderboardOp();
 		}
 	}
@@ -524,10 +539,21 @@ class Steam
 				processNextLeaderboardOp();
 			case "ScoreDownloaded":
 				if (success) {
-					var scores = data.split(";");
-					for (score in scores) {
-						var score = LeaderboardScore.fromString(data);
-						if (score != null && whenLeaderboardScoreDownloaded != null) whenLeaderboardScoreDownloaded(score);
+					var rawScores = data.split(";");
+					var processedScores:Array<LeaderboardScore> = new Array<LeaderboardScore>();
+					
+					for (score in rawScores) 
+					{
+						var processedScore = LeaderboardScore.fromString(score);
+						if (processedScore != null) 
+						{
+							processedScores.push(processedScore);
+						}
+					}
+					
+					if (whenLeaderboardScoreDownloaded != null) 
+					{						
+						whenLeaderboardScoreDownloaded(processedScores);
 					}
 				}
 				processNextLeaderboardOp();
@@ -633,7 +659,7 @@ class Steam
 	private static var SteamWrap_StoreStats:Dynamic;
 	private static var SteamWrap_FindLeaderboard:Dynamic;
 	private static var SteamWrap_UploadScore:String->Int->Int->Bool;
-	private static var SteamWrap_DownloadScores:String->Int->Int->Bool;
+	private static var SteamWrap_DownloadScores:String->Int->Int->Int->Bool;
 	private static var SteamWrap_RequestGlobalStats:Dynamic;
 	private static var SteamWrap_GetGlobalStat:Dynamic;
 	private static var SteamWrap_RestartAppIfNecessary:Dynamic;
@@ -652,22 +678,25 @@ class LeaderboardScore {
 	public var score:Int;
 	public var detail:Int;
 	public var rank:Int;
+	public var name:String;
 
-	public function new(leaderboardId_:String, score_:Int, detail_:Int, rank_:Int=-1) {
+	public function new(leaderboardId_:String, name_:String, score_:Int, detail_:Int, rank_:Int=-1) {
 		leaderboardId = leaderboardId_;
 		score = score_;
 		detail = detail_;
 		rank = rank_;
+		name = name_;
 	}
 
 	public function toString():String {
-		return leaderboardId  + "," + score + "," + detail + "," + rank;
+		return leaderboardId  + "," + name + "," + score + "," + detail + "," + rank;
 	}
 
 	public static function fromString(str:String):LeaderboardScore {
 		var tokens = str.split(",");
-		if (tokens.length == 4)
-			return new LeaderboardScore(tokens[0], Util.str2Int(tokens[1]), Util.str2Int(tokens[2]), Util.str2Int(tokens[3]));
+		
+		if (tokens.length == 5)
+			return new LeaderboardScore(tokens[0], Std.string(tokens[1]), Std.parseInt(tokens[2]), Std.parseInt(tokens[3]), Std.parseInt(tokens[4]));
 		else
 			return null;
 	}
