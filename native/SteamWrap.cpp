@@ -14,6 +14,7 @@
 
 #include <steam/steam_api.h>
 
+#pragma region Helpers
 //Thanks to Sven Bergström for these two helper functions:
 inline value bytes_to_hx( const unsigned char* bytes, int byteLength )
 {
@@ -95,9 +96,50 @@ void deleteSteamParamStringArray(SteamParamStringArray_t * params)
 	delete params;
 }
 
+inline value id_to_hx(CSteamID id) {
+	std::ostringstream r;
+	r << id.ConvertToUint64();
+	return alloc_string(r.str().c_str());
+}
+
+inline CSteamID hx_to_id(value hx) {
+	return strtoull(val_string(hx), NULL, 0);
+}
+inline CSteamID hx_to_id(const char* hx) {
+	return strtoull(hx, NULL, 0);
+}
 
 AutoGCRoot *g_eventHandler = 0;
 
+#pragma endregion
+
+#pragma region Macros
+// Sets up a default return value and checks for init-exit.
+#define swp_start(defValue)\
+	value __defValue__ = defValue;\
+	if (!CheckInit()) return __defValue__;
+// Requires condition to be met for function to proceed.
+#define swp_req(expr) if (!(expr)) return __defValue__;
+// Sets up and checks for an int parameter.
+#define swp_int(name, value)\
+	if (!val_is_int(value)) {\
+		hx_failure("Expected " #name " to be an int.");\
+		return __defValue__;\
+	};\
+	int name = val_int(value);
+// Sets up and checks for a string parameter.
+#define swp_string(name, value)\
+	if (!val_is_string(value)) {\
+		hx_failure("Expected " #name " to be a string.");\
+		return __defValue__;\
+	};\
+	auto name = val_string(value);
+// Default/blank Steam ID
+#define val_noid alloc_string("0")
+
+#pragma endregion
+
+#pragma region Events & callbacks
 //-----------------------------------------------------------------------------------------------------------
 // Event
 //-----------------------------------------------------------------------------------------------------------
@@ -122,6 +164,10 @@ static const char* kEventTypeOnGetPublishedFileDetails = "PublishedFileDetailsGo
 static const char* kEventTypeOnDownloadItem = "ItemDownloaded";
 static const char* kEventTypeOnItemInstalled = "ItemInstalled";
 static const char* kEventTypeOnUGCQueryCompleted = "UGCQueryCompleted";
+static const char* kEventTypeOnLobbyJoined = "LobbyJoined";
+static const char* kEventTypeOnLobbyJoinRequested = "LobbyJoinRequested";
+static const char* kEventTypeOnLobbyCreated = "LobbyCreated";
+static const char* kEventTypeOnLobbyListReceived = "LobbyListReceived";
 
 //A simple data structure that holds on to the native 64-bit handles and maps them to regular ints.
 //This is because it is cumbersome to pass back 64-bit values over CFFI, and strictly speaking, the haxe 
@@ -195,8 +241,11 @@ struct Event
 {
 	const char* m_type;
 	int m_success;
-	std::string m_data;
-	Event(const char* type, bool success=false, const std::string& data="") : m_type(type), m_success(success), m_data(data) {}
+	value m_data;
+	Event(const char* type, bool success=false, const std::string& data="") :
+		m_type(type), m_success(success), m_data(alloc_string(data.c_str())) {}
+	Event(const char* type, bool success, value data) :
+		m_type(type), m_success(success), m_data(data) {}
 };
 
 static void SendEvent(const Event& e)
@@ -206,7 +255,7 @@ static void SendEvent(const Event& e)
     value obj = alloc_empty_object();
     alloc_field(obj, val_id("type"), alloc_string(e.m_type));
     alloc_field(obj, val_id("success"), alloc_int(e.m_success ? 1 : 0));
-    alloc_field(obj, val_id("data"), alloc_string(e.m_data.c_str()));
+    alloc_field(obj, val_id("data"), e.m_data);
     val_call1(g_eventHandler->get(), obj);
 }
 
@@ -251,6 +300,7 @@ public:
 	STEAM_CALLBACK( CallbackHandler, OnGamepadTextInputDismissed, GamepadTextInputDismissed_t, m_CallbackGamepadTextInputDismissed );
 	STEAM_CALLBACK( CallbackHandler, OnDownloadItem, DownloadItemResult_t, m_CallbackDownloadItemResult );
 	STEAM_CALLBACK( CallbackHandler, OnItemInstalled, ItemInstalled_t, m_CallbackItemInstalled );
+	STEAM_CALLBACK( CallbackHandler, OnLobbyJoinRequested, GameLobbyJoinRequested_t );
 	
 	void FindLeaderboard(const char* name);
 	void OnLeaderboardFound( LeaderboardFindResult_t *pResult, bool bIOFailure);
@@ -303,8 +353,21 @@ public:
 	void FileShare(const char* fileName);
 	void OnFileShared( RemoteStorageFileShareResult_t *pResult, bool bIOFailure);
 	CCallResult<CallbackHandler, RemoteStorageFileShareResult_t> m_callResultFileShare;
+
+	void LobbyJoin(CSteamID id);
+	void OnLobbyJoined(LobbyEnter_t* pResult, bool bIOFailure);
+	CCallResult<CallbackHandler, LobbyEnter_t> m_callResultLobbyJoined;
 	
+	void LobbyCreate(int kind, int maxMembers);
+	void OnLobbyCreated(LobbyCreated_t* pResult, bool bIOFailure);
+	CCallResult<CallbackHandler, LobbyCreated_t> m_callResultLobbyCreated;
+
+	void LobbyListRequest();
+	void OnLobbyListReceived(LobbyMatchList_t* pResult, bool bIOFailure);
+	CCallResult<CallbackHandler, LobbyMatchList_t> m_callResultLobbyListReceived;
 };
+
+#pragma region Callback implementations
 
 void CallbackHandler::OnGamepadTextInputDismissed( GamepadTextInputDismissed_t *pCallback )
 {
@@ -800,8 +863,11 @@ void CallbackHandler::OnItemInstalled( ItemInstalled_t *pCallback )
 	SendEvent(Event(kEventTypeOnDownloadItem, true, fileIDStream.str().c_str()));
 }
 
+#pragma endregion
 //-----------------------------------------------------------------------------------------------------------
 static CallbackHandler* s_callbackHandler = NULL;
+
+#pragma endregion
 
 extern "C"
 {
@@ -862,6 +928,7 @@ void SteamWrap_RunCallbacks()
 }
 DEFINE_PRIM(SteamWrap_RunCallbacks, 0);
 
+#pragma region Stats
 //-----------------------------------------------------------------------------------------------------------
 value SteamWrap_RequestStats()
 {
@@ -956,6 +1023,9 @@ value SteamWrap_StoreStats()
 }
 DEFINE_PRIM(SteamWrap_StoreStats, 0);
 
+#pragma endregion
+
+#pragma region UGC
 //-----------------------------------------------------------------------------------------------------------
 value SteamWrap_SubmitUGCItemUpdate(value updateHandle, value changeNotes)
 {
@@ -1254,6 +1324,9 @@ int SteamWrap_SetReturnKeyValueTags(const char * handle, int returnKeyValueTags)
 }
 DEFINE_PRIME2(SteamWrap_SetReturnKeyValueTags);
 
+#pragma endregion
+
+#pragma region Scores/Achievements
 //-----------------------------------------------------------------------------------------------------------
 value SteamWrap_SetAchievement(value name)
 {
@@ -1483,6 +1556,9 @@ DEFINE_PRIM(SteamWrap_GetCurrentGameLanguage, 0);
 
 //-----------------------------------------------------------------------------------------------------------
 
+#pragma endregion
+
+#pragma region New Workshop
 //NEW STEAM WORKSHOP---------------------------------------------------------------------------------------------
 
 int SteamWrap_GetNumSubscribedItems(int dummy)
@@ -1793,6 +1869,9 @@ value SteamWrap_GetQueryUGCResult(value sHandle, value iIndex)
 }
 DEFINE_PRIM(SteamWrap_GetQueryUGCResult, 2);
 
+#pragma endregion
+
+#pragma region Old Workshop
 //OLD STEAM WORKSHOP---------------------------------------------------------------------------------------------
 
 value SteamWrap_GetUGCDownloadProgress(value contentHandle)
@@ -1901,6 +1980,9 @@ value SteamWrap_UGCRead(value handle, value bytesToRead, value offset, value rea
 }
 DEFINE_PRIM(SteamWrap_UGCRead,4);
 
+#pragma endregion
+
+#pragma region Steam Cloud
 //-----------------------------------------------------------------------------------------------------------
 
 //STEAM CLOUD------------------------------------------------------------------------------------------------
@@ -2011,6 +2093,310 @@ value SteamWrap_GetQuota()
 }
 DEFINE_PRIM(SteamWrap_GetQuota,0);
 
+#pragma endregion
+
+#pragma region Steam Networking
+#define SteamNetworking SteamNetworking()
+value SteamWrap_SendPacket(value handle, value haxeBytes, value size, value type) {
+	if (!CheckInit() || !val_is_string(handle) || !val_is_int(size) || !val_is_int(type)) return alloc_bool(false);
+	uint64 u64Handle = strtoull(val_string(handle), NULL, 0);
+	CffiBytes bytes = getByteData(haxeBytes);
+	EP2PSend etype = k_EP2PSendUnreliable;
+	switch ((int32)val_int(type)) {
+		case 1: etype = k_EP2PSendUnreliableNoDelay; break;
+		case 2: etype = k_EP2PSendReliable; break;
+		case 3: etype = k_EP2PSendReliableWithBuffering; break;
+	}
+	if (bytes.data == 0) return alloc_bool(false);
+	return alloc_bool(SteamNetworking->SendP2PPacket(u64Handle, bytes.data, (int32)val_int(size), etype));
+}
+DEFINE_PRIM(SteamWrap_SendPacket, 4);
+
+uint32 SteamWrap_PacketSize = 0;
+value SteamWrap_GetPacketSize() {
+	if (!CheckInit()) return alloc_int(0);
+	return alloc_int(SteamWrap_PacketSize);
+}
+DEFINE_PRIM(SteamWrap_GetPacketSize, 0);
+
+void* SteamWrap_PacketData = nullptr;
+value SteamWrap_GetPacketData() {
+	if (!CheckInit() || SteamWrap_PacketData == nullptr) return alloc_bool(false);
+	return bytes_to_hx((unsigned char*)SteamWrap_PacketData, SteamWrap_PacketSize);
+}
+DEFINE_PRIM(SteamWrap_GetPacketData, 0);
+
+CSteamID SteamWrap_PacketSender;
+value SteamWrap_GetPacketSender() {
+	if (!CheckInit()) return alloc_string("");
+	return id_to_hx(SteamWrap_PacketSender);
+}
+DEFINE_PRIM(SteamWrap_GetPacketSender, 0);
+
+value SteamWrap_ReceivePacket() {
+	uint32 SteamWrap_PacketSizePre = 0;
+	if (SteamNetworking && SteamNetworking->IsP2PPacketAvailable(&SteamWrap_PacketSizePre)) {
+		// dealloc the current buffer if it's still around:
+		if (SteamWrap_PacketData != nullptr) {
+			free(SteamWrap_PacketData);
+			SteamWrap_PacketData = nullptr;
+		}
+		//
+		SteamWrap_PacketData = malloc(SteamWrap_PacketSizePre);
+		if (SteamNetworking->ReadP2PPacket(
+			SteamWrap_PacketData, SteamWrap_PacketSizePre,
+			&SteamWrap_PacketSize, &SteamWrap_PacketSender)) {
+			return alloc_bool(true);
+		}
+	}
+	return alloc_bool(false);
+}
+DEFINE_PRIM(SteamWrap_ReceivePacket, 0);
+/*int SteamWrap_SendP2PPacket(const char * handle, value haxeBytes, int size, int type) {
+	printf("Bock!\n"); fflush(stdout);
+	if (!CheckInit()) return (4);
+	return (5);
+	uint64 u64Handle = strtoull(handle, NULL, 0);
+	CffiBytes bytes = getByteData(haxeBytes);
+	EP2PSend etype = k_EP2PSendUnreliable;
+	switch ((int32)type) {
+		case 1: etype = k_EP2PSendUnreliableNoDelay; break;
+		case 2: etype = k_EP2PSendReliable; break;
+		case 3: etype = k_EP2PSendReliableWithBuffering; break;
+	}
+	if (bytes.data == 0) return alloc_bool(false);
+	return true || SteamNetworking->SendP2PPacket(u64Handle, bytes.data, size, etype);
+}
+DEFINE_PRIME4(SteamWrap_SendP2PPacket);*/
+#pragma endregion
+
+#pragma region Steam Matchmaking
+
+#pragma region Current lobby
+CSteamID SteamWrap_LobbyID;
+
+value SteamWrap_LeaveLobby() {
+	swp_start(val_false);
+	swp_req(SteamWrap_LobbyID.IsValid());
+	SteamMatchmaking()->LeaveLobby(SteamWrap_LobbyID);
+	SteamWrap_LobbyID.Clear();
+	return val_true;
+}
+DEFINE_PRIM(SteamWrap_LeaveLobby, 0);
+
+value SteamWrap_LobbyID_() {
+	swp_start(val_noid);
+	return id_to_hx(SteamWrap_LobbyID);
+}
+DEFINE_PRIM(SteamWrap_LobbyID_, 0);
+
+value SteamWrap_LobbyOwnerID() {
+	swp_start(val_noid); swp_req(SteamWrap_LobbyID.IsValid());
+	return id_to_hx(SteamMatchmaking()->GetLobbyOwner(SteamWrap_LobbyID));
+}
+DEFINE_PRIM(SteamWrap_LobbyOwnerID, 0);
+
+value SteamWrap_LobbyMemberCount() {
+	swp_start(alloc_int(0)); swp_req(SteamWrap_LobbyID.IsValid());
+	return alloc_int(SteamMatchmaking()->GetNumLobbyMembers(SteamWrap_LobbyID));
+}
+DEFINE_PRIM(SteamWrap_LobbyMemberCount, 0);
+
+value SteamWrap_LobbyMemberID(value index) {
+	swp_start(val_noid); swp_int(i, index);
+	swp_req(SteamWrap_LobbyID.IsValid() && i >= 0 && i < SteamMatchmaking()->GetNumLobbyMembers(SteamWrap_LobbyID));
+	return id_to_hx(SteamMatchmaking()->GetLobbyMemberByIndex(SteamWrap_LobbyID, i));
+}
+DEFINE_PRIM(SteamWrap_LobbyMemberID, 1);
+
+value SteamWrap_LobbySetData(value field, value data) {
+	if (CheckInit() && val_is_string(field) && val_is_string(data) && SteamWrap_LobbyID.IsValid()) {
+		return alloc_bool(SteamMatchmaking()->SetLobbyData(SteamWrap_LobbyID, val_string(field), val_string(data)));
+	} else return alloc_bool(false);
+}
+DEFINE_PRIM(SteamWrap_LobbySetData, 2);
+
+value SteamWrap_ActivateInviteOverlay() {
+	if (CheckInit() && SteamFriends() && SteamWrap_LobbyID.IsValid()) {
+		SteamFriends()->ActivateGameOverlayInviteDialog(SteamWrap_LobbyID);
+		return alloc_bool(true);
+	} else return alloc_bool(false);
+}
+DEFINE_PRIM(SteamWrap_ActivateInviteOverlay, 0);
+#pragma endregion
+
+#pragma region Lobby list
+std::vector<CSteamID> SteamWrap_LobbyList;
+
+value SteamWrap_LobbyListLength() {
+	return alloc_int(SteamWrap_LobbyList.size());
+}
+DEFINE_PRIM(SteamWrap_LobbyListLength, 0);
+
+value SteamWrap_LobbyListGetID(value index) {
+	swp_start(val_noid); swp_int(i, index);
+	swp_req(i >= 0 && i < SteamWrap_LobbyList.size());
+	return id_to_hx(SteamWrap_LobbyList[i]);
+}
+DEFINE_PRIM(SteamWrap_LobbyListGetID, 1);
+
+value SteamWrap_LobbyListGetData(value index, value field) {
+	swp_start(alloc_string("")); swp_int(i, index); swp_string(s, field);
+	swp_req(i >= 0 && i < SteamWrap_LobbyList.size());
+	return alloc_string(SteamMatchmaking()->GetLobbyData(SteamWrap_LobbyList[i], val_string(field)));
+}
+DEFINE_PRIM(SteamWrap_LobbyListGetData, 2);
+
+bool SteamWrap_LobbyListLoading = false;
+value SteamWrap_LobbyListIsLoading() {
+	return alloc_bool(SteamWrap_LobbyListLoading);
+}
+DEFINE_PRIM(SteamWrap_LobbyListIsLoading, 0);
+
+void CallbackHandler::LobbyListRequest() {
+	SteamWrap_LobbyListLoading = true;
+	SteamAPICall_t hSteamAPICall = SteamMatchmaking()->RequestLobbyList();
+	m_callResultLobbyListReceived.Set(hSteamAPICall, this, &CallbackHandler::OnLobbyListReceived);
+}
+
+void CallbackHandler::OnLobbyListReceived(LobbyMatchList_t* pResult, bool bIOFailure) {
+	auto found = pResult->m_nLobbiesMatching;
+	SteamWrap_LobbyList.resize(found);
+	for (uint32 i = 0; i < found; i++) {
+		SteamWrap_LobbyList[i] = SteamMatchmaking()->GetLobbyByIndex(i);
+	}
+	SteamWrap_LobbyListLoading = false;
+	SendEvent(Event(kEventTypeOnLobbyListReceived, !bIOFailure, alloc_int(found)));
+}
+
+value SteamWrap_RequestLobbyList() {
+	swp_start(val_false); swp_req(SteamMatchmaking());
+	s_callbackHandler->LobbyListRequest();
+	return val_true;
+}
+DEFINE_PRIM(SteamWrap_RequestLobbyList, 0);
+
+#pragma endregion
+
+#pragma region Lobby list filters
+ELobbyComparison SteamWrap_LobbyCmp(int32 filter) {
+	switch (filter) {
+		case -2: return k_ELobbyComparisonEqualToOrLessThan;
+		case -1: return k_ELobbyComparisonLessThan;
+		case  1: return k_ELobbyComparisonGreaterThan;
+		case  2: return k_ELobbyComparisonEqualToOrGreaterThan;
+		case  3: return k_ELobbyComparisonNotEqual;
+		default: return k_ELobbyComparisonEqual;
+	}
+}
+
+value SteamWrap_LobbyListAddStringFilter(value field, value data, value cmp) {
+	swp_start(val_false); swp_string(s, field); swp_string(v, data); swp_int(c, cmp);
+	swp_req(SteamMatchmaking());
+	SteamMatchmaking()->AddRequestLobbyListStringFilter(s, v, SteamWrap_LobbyCmp(c));
+	return val_true;
+}
+DEFINE_PRIM(SteamWrap_LobbyListAddStringFilter, 3);
+
+value SteamWrap_LobbyListAddNumericalFilter(value field, value data, value cmp) {
+	swp_start(val_false); swp_string(s, field); swp_int(v, data); swp_int(c, cmp);
+	swp_req(SteamMatchmaking());
+	SteamMatchmaking()->AddRequestLobbyListNumericalFilter(s, v, SteamWrap_LobbyCmp(c));
+	return val_true;
+}
+DEFINE_PRIM(SteamWrap_LobbyListAddNumericalFilter, 3);
+
+value SteamWrap_LobbyListAddNearFilter(value field, value data) {
+	swp_start(val_false); swp_string(s, field); swp_int(v, data);
+	swp_req(SteamMatchmaking());
+	SteamMatchmaking()->AddRequestLobbyListNearValueFilter(s, v);
+	return val_true;
+}
+DEFINE_PRIM(SteamWrap_LobbyListAddNearFilter, 2);
+
+value SteamWrap_LobbyListAddDistanceFilter(value mode) {
+	swp_start(val_false); swp_int(m, mode);
+	swp_req(SteamMatchmaking());
+	ELobbyDistanceFilter d = k_ELobbyDistanceFilterDefault;
+	switch (m) {
+		case 0: d = k_ELobbyDistanceFilterClose; break;
+		case 1: d = k_ELobbyDistanceFilterDefault; break;
+		case 2: d = k_ELobbyDistanceFilterFar; break;
+		case 3: d = k_ELobbyDistanceFilterWorldwide; break;
+	}
+	SteamMatchmaking()->AddRequestLobbyListDistanceFilter(d);
+	return val_true;
+}
+DEFINE_PRIM(SteamWrap_LobbyListAddDistanceFilter, 1);
+#pragma endregion
+
+#pragma region Joining lobbies
+
+void CallbackHandler::LobbyJoin(CSteamID id) {
+	SteamAPICall_t hSteamAPICall = SteamMatchmaking()->JoinLobby(id);
+	m_callResultLobbyJoined.Set(hSteamAPICall, this, &CallbackHandler::OnLobbyJoined);
+}
+
+void CallbackHandler::OnLobbyJoined(LobbyEnter_t* pResult, bool bIOFailure) {
+	SteamWrap_LobbyID.SetFromUint64(pResult->m_ulSteamIDLobby);
+	SendEvent(Event(kEventTypeOnLobbyJoined, !bIOFailure, id_to_hx(pResult->m_ulSteamIDLobby)));
+}
+
+value SteamWrap_JoinLobby(value id) {
+	swp_start(val_false); swp_string(q, id);
+	swp_req(SteamMatchmaking());
+	s_callbackHandler->LobbyJoin(hx_to_id(id));
+	return val_true;
+}
+DEFINE_PRIME1(SteamWrap_JoinLobby);
+
+void CallbackHandler::OnLobbyJoinRequested(GameLobbyJoinRequested_t* pResult) {
+	value obj = alloc_empty_object();
+	alloc_field(obj, val_id("lobbyID"), id_to_hx(pResult->m_steamIDLobby));
+	alloc_field(obj, val_id("friendID"), id_to_hx(pResult->m_steamIDFriend));
+	SendEvent(Event(kEventTypeOnLobbyJoinRequested, true, obj));
+}
+
+#pragma endregion
+
+#pragma region Making lobbies
+ELobbyType SteamWrap_LobbyType(int32 type) {
+	switch (type) {
+		case 1: return k_ELobbyTypeFriendsOnly;
+		case 2: return k_ELobbyTypePublic;
+		default: return k_ELobbyTypePrivate;
+	}
+}
+
+void CallbackHandler::LobbyCreate(int kind, int maxMembers) {
+	SteamAPICall_t hSteamAPICall = SteamMatchmaking()->CreateLobby(SteamWrap_LobbyType(kind), maxMembers);
+	m_callResultLobbyCreated.Set(hSteamAPICall, this, &CallbackHandler::OnLobbyCreated);
+}
+
+void CallbackHandler::OnLobbyCreated(LobbyCreated_t* pResult, bool bIOFailure) {
+	SteamWrap_LobbyID.SetFromUint64(pResult->m_ulSteamIDLobby);
+	SendEvent(Event(kEventTypeOnLobbyCreated, pResult->m_eResult == k_EResultOK));
+}
+
+bool SteamWrap_CreateLobby(int kind, int maxMembers) {
+	if (!CheckInit() || !SteamMatchmaking()) return false;
+	s_callbackHandler->LobbyCreate(kind, maxMembers);
+	return true;
+}
+DEFINE_PRIME2(SteamWrap_CreateLobby);
+
+bool SteamWrap_SetLobbyType(int type) {
+	if (CheckInit() && SteamWrap_LobbyID.IsValid()) {
+		return SteamMatchmaking()->SetLobbyType(SteamWrap_LobbyID, SteamWrap_LobbyType(type));
+	} else return false;
+}
+DEFINE_PRIME1(SteamWrap_SetLobbyType);
+
+#pragma endregion
+
+#pragma endregion
+
+#pragma region Steam Controller
 //-----------------------------------------------------------------------------------------------------------
 
 //STEAM CONTROLLER-------------------------------------------------------------------------------------------
@@ -2525,6 +2911,8 @@ value SteamWrap_GetControllerMaxAnalogActionData()
 DEFINE_PRIM(SteamWrap_GetControllerMaxAnalogActionData,0);
 
 //-----------------------------------------------------------------------------------------------------------
+
+#pragma endregion
 
 void mylib_main()
 {
