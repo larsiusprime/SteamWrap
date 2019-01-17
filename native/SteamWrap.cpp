@@ -260,7 +260,7 @@ public:
 	void OnScoreUploaded( LeaderboardScoreUploaded_t *pResult, bool bIOFailure);
 	CCallResult<CallbackHandler, LeaderboardScoreUploaded_t> m_callResultUploadScore;
 
-	bool DownloadScores(const std::string& leaderboardId, int numBefore, int numAfter);
+	bool DownloadScores(const std::string& leaderboardId, int downloadType, int numBefore, int numAfter);
 	void OnScoreDownloaded( LeaderboardScoresDownloaded_t *pResult, bool bIOFailure);
 	CCallResult<CallbackHandler, LeaderboardScoresDownloaded_t> m_callResultDownloadScore;
 
@@ -455,10 +455,10 @@ void CallbackHandler::FileShare(const char * fileName)
 	m_callResultFileShare.Set(hSteamAPICall, this, &CallbackHandler::OnFileShared);
 }
 
-static std::string toLeaderboardScore(const char* leaderboardName, int score, int detail, int rank)
+static std::string toLeaderboardScore(const char* leaderboardName, const char* userName, int score, int detail, int rank)
 {
 	std::ostringstream data;
-	data << leaderboardName << "," << score << "," << detail << "," << rank;
+	data << leaderboardName << "," << userName << "," << score << "," << detail << "," << rank;
 	return data.str();
 }
 
@@ -467,7 +467,7 @@ void CallbackHandler::OnScoreUploaded(LeaderboardScoreUploaded_t *pCallback, boo
 	if (pCallback->m_bSuccess && !bIOFailure)
 	{
 		std::string leaderboardName = SteamUserStats()->GetLeaderboardName(pCallback->m_hSteamLeaderboard);
-		std::string data = toLeaderboardScore(SteamUserStats()->GetLeaderboardName(pCallback->m_hSteamLeaderboard), pCallback->m_nScore, -1, pCallback->m_nGlobalRankNew);
+		std::string data = toLeaderboardScore(SteamUserStats()->GetLeaderboardName(pCallback->m_hSteamLeaderboard), "Score Uploaded", pCallback->m_nScore, -1, pCallback->m_nGlobalRankNew);
 		SendEvent(Event(kEventTypeOnScoreUploaded, true, data));
 	}
 	else if (pCallback != NULL && pCallback->m_hSteamLeaderboard != 0)
@@ -498,13 +498,24 @@ void CallbackHandler::OnFileShared(RemoteStorageFileShareResult_t *pCallback, bo
 	}
 }
 
-bool CallbackHandler::DownloadScores(const std::string& leaderboardId, int numBefore, int numAfter)
+bool CallbackHandler::DownloadScores(const std::string& leaderboardId, int downloadType, int numBefore, int numAfter)
 {
    	if (m_leaderboards.find(leaderboardId) == m_leaderboards.end() || m_leaderboards[leaderboardId] == 0)
    		return false;
 
- 	// load the specified leaderboard data around the current user
- 	SteamAPICall_t hSteamAPICall = SteamUserStats()->DownloadLeaderboardEntries(m_leaderboards[leaderboardId], k_ELeaderboardDataRequestGlobalAroundUser, -numBefore, numAfter);
+	SteamAPICall_t hSteamAPICall;
+
+	// download user scores with the correct download type
+	if (downloadType == 0) {
+		hSteamAPICall = SteamUserStats()->DownloadLeaderboardEntries(m_leaderboards[leaderboardId], k_ELeaderboardDataRequestGlobal, -numBefore, numAfter);
+	}
+	else if (downloadType == 1) {
+		hSteamAPICall = SteamUserStats()->DownloadLeaderboardEntries(m_leaderboards[leaderboardId], k_ELeaderboardDataRequestGlobalAroundUser, -numBefore, numAfter);
+	}
+	else if (downloadType == 2) {
+		hSteamAPICall = SteamUserStats()->DownloadLeaderboardEntries(m_leaderboards[leaderboardId], k_ELeaderboardDataRequestFriends, -numBefore, numAfter);
+	}
+
 	m_callResultDownloadScore.Set(hSteamAPICall, this, &CallbackHandler::OnScoreDownloaded);
 
  	return true;
@@ -535,7 +546,7 @@ void CallbackHandler::OnScoreDownloaded(LeaderboardScoresDownloaded_t *pCallback
 		if (entry.m_cDetails != 1) continue;
 
 		if (haveData) data << ";";
-		data << toLeaderboardScore(leaderboardId.c_str(), entry.m_nScore, details[0], entry.m_nGlobalRank).c_str();
+		data << toLeaderboardScore(leaderboardId.c_str(), SteamFriends()->GetFriendPersonaName(entry.m_steamIDUser), entry.m_nScore, details[0], entry.m_nGlobalRank).c_str();
 		haveData = true;
 	}
 
@@ -546,7 +557,7 @@ void CallbackHandler::OnScoreDownloaded(LeaderboardScoresDownloaded_t *pCallback
 	else
 	{
 		// ok but no scores
-		SendEvent(Event(kEventTypeOnScoreDownloaded, true, toLeaderboardScore(leaderboardId.c_str(), -1, -1, -1)));
+		SendEvent(Event(kEventTypeOnScoreDownloaded, true, toLeaderboardScore(leaderboardId.c_str(), "No Scores", -1, -1, -1)));
 	}
 }
 
@@ -1351,15 +1362,15 @@ value SteamWrap_UploadScore(value name, value score, value detail)
 DEFINE_PRIM(SteamWrap_UploadScore, 3);
 
 //-----------------------------------------------------------------------------------------------------------
-value SteamWrap_DownloadScores(value name, value numBefore, value numAfter)
+value SteamWrap_DownloadScores(value name, value downloadType, value numBefore, value numAfter)
 {
-	if (!val_is_string(name) || !val_is_int(numBefore) || !val_is_int(numAfter) || !CheckInit())
+	if (!val_is_string(name) || !val_is_int(downloadType) || !val_is_int(numBefore) || !val_is_int(numAfter) || !CheckInit())
 		return alloc_bool(false);
 
-	bool result = s_callbackHandler->DownloadScores(val_string(name), val_int(numBefore), val_int(numAfter));
+	bool result = s_callbackHandler->DownloadScores(val_string(name), val_int(downloadType), val_int(numBefore), val_int(numAfter));
 	return alloc_bool(result);
 }
-DEFINE_PRIM(SteamWrap_DownloadScores, 3);
+DEFINE_PRIM(SteamWrap_DownloadScores, 4);
 
 //-----------------------------------------------------------------------------------------------------------
 value SteamWrap_RequestGlobalStats()
