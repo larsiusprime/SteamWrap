@@ -37,6 +37,8 @@ class Test
 		//
 		//If you have no clue what this means, READ THE STEAM DOCS!
 		//
+		// ( https://partner.steamgames.com/doc/features/steam_controller/getting_started_for_devs )
+		//
 		//It won't crash if you haven't, it just won't work
 		
 		var controllers:Array<Int> = Steam.controllers.getConnectedControllers();
