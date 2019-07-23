@@ -31,14 +31,14 @@ Probably works with NME as well but I'm unsure of the requirements there. Ask Hu
     
 2. Add the following nodes to your project.xml (assumes OpenFL or NME for now):
  ```
-    <haxelib name="steamwrap"/>
-  
     <!-- Replace the question marks with your Steam App ID -->
     <setenv name="STEAM_APP_ID" value="??????" />
 
     <!-- OS X only: Set this value to the same value as the file property of your <app> node, this is needed to embed things into the generated .app file -->
     <!-- Setting this for other platforms won't do any harm, so you can safely leave it enabled for everything -->
     <set name="APP_FILE" value="??????" />
+    
+    <haxelib name="steamwrap"/>
  ```
  
 3. If you are doing non-Steam builds as well, it is practical to wrap this in a conditional. Run your builds as: `openfl test <platform> -Dsteam` to enable it, for example: `openfl test windows -Dsteam`.
