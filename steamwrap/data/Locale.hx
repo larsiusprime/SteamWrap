@@ -40,7 +40,7 @@ abstract Locale(String) from String
 		
 		str = str.toLowerCase();
 		
-		this = switch(str) {
+		this = switch(str : Locale) {
 			
 			case 
 				Locale.BRAZILIAN, 
