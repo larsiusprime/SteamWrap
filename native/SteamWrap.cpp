@@ -2423,7 +2423,7 @@ value SteamWrap_InitControllers()
 	{
 		mapControllers.init();
 		
-		analogActionData.eMode = k_EControllerSourceMode_None;
+		analogActionData.eMode = k_EInputSourceMode_None;
 		analogActionData.x = 0.0;
 		analogActionData.y = 0.0;
 		analogActionData.bActive = false;
@@ -2864,15 +2864,23 @@ DEFINE_PRIME1(SteamWrap_GetMotionData_rotVelZ);
 
 int SteamWrap_ShowDigitalActionOrigins(int controllerHandle, int digitalActionHandle, float scale, float xPosition, float yPosition)
 {
+	//Deprecated for now until I refactor the API to fix according to Valve's changes	
+	/*
 	ControllerHandle_t c_handle = controllerHandle != -1 ? mapControllers.get(controllerHandle) : STEAM_CONTROLLER_HANDLE_ALL_CONTROLLERS;
 	return SteamController()->ShowDigitalActionOrigins(c_handle, digitalActionHandle, scale, xPosition, yPosition);
+	*/
+	return 0;
 }
 DEFINE_PRIME5(SteamWrap_ShowDigitalActionOrigins);
 
 int SteamWrap_ShowAnalogActionOrigins(int controllerHandle, int analogActionHandle, float scale, float xPosition, float yPosition)
 {
+	//Deprecated for now until I refactor the API to fix according to Valve's changes
+	/*
 	ControllerHandle_t c_handle = controllerHandle != -1 ? mapControllers.get(controllerHandle) : STEAM_CONTROLLER_HANDLE_ALL_CONTROLLERS;
 	return SteamController()->ShowAnalogActionOrigins(c_handle, analogActionHandle, scale, xPosition, yPosition);
+	*/
+	return 0;
 }
 DEFINE_PRIME5(SteamWrap_ShowAnalogActionOrigins);
 

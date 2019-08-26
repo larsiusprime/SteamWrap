@@ -20,3 +20,13 @@ ndll/Windows64/Windows64\.zip
 ndll/Windows/steam_appid\.txt
 
 ndll/Windows/steamwrap\.ndll\.hash
+
+ndll/Linux64/Test\.sh
+
+ndll/Linux64/Test
+
+ndll/Linux64/libsteam_api\.so
+
+ndll/Linux64/steam_appid\.txt
+
+ndll/Linux64/steamwrap\.ndll\.hash

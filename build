@@ -1,27 +1,26 @@
 #/bin/bash
 
-# removes old builds, just to be safe
-rm -rf obj
-
 # build native ndll
 cd native
 
-echo Building for 32 bits
-# compile for 32 bit, the flag is only really needed to differentiate from a 64 bit build
-haxelib run hxcpp Build.xml -DHXCPP_M32
+# removes old builds, just to be safe
+rm -rf obj
 
-# if we're on linux or mac, do a 64 bit build too
-os_type=$(uname -s)
-
-if [ "${os_type}" == "Linux" -o "${os_type}" == "Darwin" ]; then
-	echo Building for 64 bits
-	haxelib run hxcpp Build.xml -DHXCPP_M64
-fi
-
-#exit 0
+echo Building for 64 bits
+haxelib run hxcpp Build.xml -DHXCPP_M64
 
 # build the example program "Test"
 
 cd ..
 cd example
 haxe -cp .. Test.hx -main Test -cpp ../temp/hx/
+
+if [[ "$OSTYPE" == "linux-gnu" ]]; then
+	echo Copying Linux executable
+	cp Test.sh ../ndll/Linux64
+	cp ../temp/hx/Test ../ndll/Linux64
+	cp ../native/lib/linux64/libsteam_api.so ../ndll/Linux64
+elif [[ "$OSTYPE" == "darwin" ]]; then
+	echo Copying Mac executable
+	cpp ../temp/hx/Test.app ../ndll/Mac64
+fi

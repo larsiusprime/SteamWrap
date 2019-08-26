@@ -59,6 +59,14 @@ Probably works with NME as well but I'm unsure of the requirements there. Ask Hu
 	
 	**!!!!!!!!!!!!!!!!! IMPORTANT !!!!!!!!!!!!!!!!!!!**
 
+4. Platform specific notes:
+
+**Linux**
+ - Make sure libsteam_api.so is sitting next to steamwrap.ndll
+ - You will need a launch script to ensure libraries are loaded from the righ location. An example (Test.sh) is provided in the example folder
+   - When you release your game on Steam, set this launch script as your executable, NOT the raw linux binary itself
+
+
 #### Usage:
 
 See steamwrap/example/Test.hx for a basic example.
@@ -138,6 +146,8 @@ That's great, but we want to make sure it works! Let's run something with it. If
 	Now you are ready to compile example/Test.hx. Run the build script again.
 
 3. Start the Steam client, leave it open in the background, and run the Test app to make sure it connects.
+
+Note: If you're running on Linux, you should run the "Test.sh" launcher script, not the "Test" binary directory
 
 	
 
