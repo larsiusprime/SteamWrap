@@ -1,0 +1,1 @@
+put steam_api64.dll and steam_api64.lib in this folder

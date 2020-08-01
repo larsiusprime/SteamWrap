@@ -92,6 +92,8 @@ Or you can set it up manually:
 		STEAMSDK_DIR/public/steam/*.h -> native/include/steam/*.h
 		STEAMSDK_DIR/redistributable_bin/steam_api.dll -> native/lib/win32/
 		STEAMSDK_DIR/redistributable_bin/steam_api.lib -> native/lib/win32/
+		STEAMSDK_DIR/redistributable_bin/win64/steam_api64.dll -> native/lib/win64/
+		STEAMSDK_DIR/redistributable_bin/win64/steam_api64.lib -> native/lib/win64/
 		STEAMSDK_DIR/redistributable_bin/osx32/libsteam_api.dylib -> native/lib/osx64/
 		STEAMSDK_DIR/redistributable_bin/linux32/libsteam_api.so -> native/lib/linux32/
 		STEAMSDK_DIR/redistributable_bin/linux64/libsteam_api.so -> native/lib/linux64/
@@ -101,7 +103,10 @@ Or you can set it up manually:
 	Windows:
 	```
 		ndll/Windows/steam_appid.txt
-		STEAMSDK_DIR/redistributable_bin/steam_api.dll -> ndll/Windows
+		STEAMSDK_DIR/redistributable_bin/steam_api.dll -> ndll/Windows/
+
+		ndll/Windows64/steam_appid.txt
+		STEAMSDK_DIR/redistributable_bin/steam_api64.dll -> ndll/Windows64/
 	```
 
 	Mac:
