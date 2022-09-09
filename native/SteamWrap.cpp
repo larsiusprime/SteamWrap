@@ -1534,6 +1534,14 @@ value SteamWrap_IsOverlayEnabled()
 DEFINE_PRIM(SteamWrap_IsOverlayEnabled, 0);
 
 //-----------------------------------------------------------------------------------------------------------
+value SteamWrap_IsSteamRunningOnSteamDeck()
+{
+	bool result = SteamUtils()->IsSteamRunningOnSteamDeck();
+	return alloc_bool(result);
+}
+DEFINE_PRIM(SteamWrap_IsSteamRunningOnSteamDeck, 0);
+
+//-----------------------------------------------------------------------------------------------------------
 value SteamWrap_BOverlayNeedsPresent()
 {
 	bool result = SteamUtils()->BOverlayNeedsPresent();
