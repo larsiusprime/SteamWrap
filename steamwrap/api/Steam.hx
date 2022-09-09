@@ -132,6 +132,7 @@ class Steam
 			SteamWrap_IsSteamInBigPictureMode = cpp.Lib.load("steamwrap", "SteamWrap_IsSteamInBigPictureMode", 0);
 			SteamWrap_IsSteamRunning = cpp.Lib.load("steamwrap", "SteamWrap_IsSteamRunning", 0);
 			SteamWrap_IsOverlayEnabled = cpp.Lib.load("steamwrap", "SteamWrap_IsOverlayEnabled", 0);
+			SteamWrap_IsSteamRunningOnSteamDeck = cpp.Lib.load("steamwrap", "SteamWrap_IsSteamRunningOnSteamDeck", 0);
 			SteamWrap_BOverlayNeedsPresent = cpp.Lib.load("steamwrap", "SteamWrap_BOverlayNeedsPresent", 0);
 			SteamWrap_RequestStats = cpp.Lib.load("steamwrap", "SteamWrap_RequestStats", 0);
 			SteamWrap_RunCallbacks = cpp.Lib.load("steamwrap", "SteamWrap_RunCallbacks", 0);
@@ -330,6 +331,12 @@ class Steam
 		if (!active)
 			return false;
 		return SteamWrap_IsOverlayEnabled();
+	}
+	
+	public static function isSteamRunningOnSteamDeck():Bool {
+		if (!active)
+			return false;
+		return SteamWrap_IsSteamRunningOnSteamDeck();
 	}
 	
 	public static function BOverlayNeedsPresent() {
@@ -664,6 +671,7 @@ class Steam
 	private static var SteamWrap_GetGlobalStat:Dynamic;
 	private static var SteamWrap_RestartAppIfNecessary:Dynamic;
 	private static var SteamWrap_IsOverlayEnabled:Dynamic;
+	private static var SteamWrap_IsSteamRunningOnSteamDeck:Dynamic;
 	private static var SteamWrap_BOverlayNeedsPresent:Dynamic;
 	private static var SteamWrap_IsSteamInBigPictureMode:Dynamic;
 	private static var SteamWrap_IsSteamRunning:Dynamic;
