@@ -2507,15 +2507,11 @@ value SteamWrap_GetConnectedControllers()
 	
 	for(int i = 0; i < result; i++)
 	{
-		int index = -1;
+		int index = mapControllers.find(handles[i]);
 		
-		if(false == mapControllers.exists(handles[i]))
+		if(index < 0)
 		{
 			index = mapControllers.add(handles[i]);
-		}
-		else
-		{
-			index = mapControllers.get(handles[i]);
 		}
 		
 		if(index != -1)
