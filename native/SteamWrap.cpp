@@ -1560,7 +1560,7 @@ DEFINE_PRIM(SteamWrap_IsSteamRunning, 0);
 //-----------------------------------------------------------------------------------------------------------
 value SteamWrap_IsSteamRunningOnSteamDeck()
 {
-	bool result = SteamAPI_IsSteamRunningOnSteamDeck();
+	bool result = SteamUtils()->IsSteamRunningOnSteamDeck();
 	return alloc_bool(result);
 }
 DEFINE_PRIM(SteamWrap_IsSteamRunningOnSteamDeck, 0);
