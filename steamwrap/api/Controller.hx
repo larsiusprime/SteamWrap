@@ -130,11 +130,11 @@ class Controller
 	 * @param	controller	handle received from getConnectedControllers()
 	 * @param	actionSet	handle received from getActionSetHandle()
 	 * @param	action	handle received from getAnalogActionHandle()
-	 * @param	originsOut	existing array of EControllerActionOrigins you want to fill (optional)
+	 * @param	originsOut	existing array of EInputActionOrigins you want to fill (optional)
 	 * @return the number of origins supplied in originsOut.
 	 */
 	
-	public function getAnalogActionOrigins(controller:Int, actionSet:Int, action:Int, ?originsOut:Array<EControllerActionOrigin>):Int {
+	public function getAnalogActionOrigins(controller:Int, actionSet:Int, action:Int, ?originsOut:Array<EInputActionOrigin>):Int {
 		if (!active) return -1;
 		var str:String = SteamWrap_GetAnalogActionOrigins(controller, actionSet, action);
 		var strArr:Array<String> = str.split(",");
@@ -206,11 +206,11 @@ class Controller
 	 * @param	controller	handle received from getConnectedControllers()
 	 * @param	actionSet	handle received from getActionSetHandle()
 	 * @param	action	handle received from getDigitalActionHandle()
-	 * @param	originsOut	existing array of EControllerActionOrigins you want to fill (optional)
+	 * @param	originsOut	existing array of EInputActionOrigins you want to fill (optional)
 	 * @return the number of origins supplied in originsOut.
 	 */
 	
-	public function getDigitalActionOrigins(controller:Int, actionSet:Int, action:Int, ?originsOut:Array<EControllerActionOrigin>):Int {
+	public function getDigitalActionOrigins(controller:Int, actionSet:Int, action:Int, ?originsOut:Array<EInputActionOrigin>):Int {
 		if (!active) return 0;
 		var str:String = SteamWrap_GetDigitalActionOrigins(controller, actionSet, action);
 		var strArr:Array<String> = str.split(",");
@@ -237,7 +237,7 @@ class Controller
 	 * @param	origin
 	 * @return
 	 */
-	public function getGlyphForActionOrigin(origin:EControllerActionOrigin):String {
+	public function getGlyphForActionOrigin(origin:EInputActionOrigin):String {
 		
 		return SteamWrap_GetGlyphForActionOrigin(origin);
 		
@@ -248,7 +248,7 @@ class Controller
 	 * @param	origin
 	 * @return
 	 */
-	public function getStringForActionOrigin(origin:EControllerActionOrigin):String {
+	public function getStringForActionOrigin(origin:EInputActionOrigin):String {
 		
 		return SteamWrap_GetStringForActionOrigin(origin);
 		
@@ -394,9 +394,9 @@ class Controller
 	 * Set the controller LED color on supported controllers. 
 	 * @param	controller	handle received from getConnectedControllers()
 	 * @param	rgb	an RGB color in 0xRRGGBB format
-	 * @param	flags	bit-masked flags combined from values defined in ESteamControllerLEDFlags
+	 * @param	flags	bit-masked flags combined from values defined in ESteamInputLEDFlags
 	 */
-	public function setLEDColor(controller:Int, rgb:Int, flags:Int=ESteamControllerLEDFlags.SET_COLOR) {
+	public function setLEDColor(controller:Int, rgb:Int, flags:Int=ESteamInputLEDFlags.SET_COLOR) {
 		
 		var r = (rgb >> 16) & 0xFF;
 		var g = (rgb >> 8) & 0xFF;
@@ -406,7 +406,7 @@ class Controller
 	}
 	
 	public function resetLEDColor(controller:Int) {
-		SteamWrap_SetLEDColor.call(controller, 0, 0, 0, ESteamControllerLEDFlags.RESTORE_USER_DEFAULT);
+		SteamWrap_SetLEDColor.call(controller, 0, 0, 0, ESteamInputLEDFlags.RESTORE_USER_DEFAULT);
 	}
 	
 	
@@ -676,20 +676,20 @@ class ControllerMotionData
 	}
 }
 
-class ESteamControllerLEDFlags {
+class ESteamInputLEDFlags {
 	
-	public static inline var SET_COLOR = 0x01;
-	public static inline var RESTORE_USER_DEFAULT = 0x10;
+	public static inline var SET_COLOR = 0x00;
+	public static inline var RESTORE_USER_DEFAULT = 0x01;
 	
 }
 
-@:enum abstract EControllerActionOrigin(Int) {
+@:enum abstract EInputActionOrigin(Int) {
 	
-	public static var fromStringMap(default, null):Map<String, EControllerActionOrigin>
-		= MacroHelper.buildMap("steamwrap.api.EControllerActionOrigin");
+	public static var fromStringMap(default, null):Map<String, EInputActionOrigin>
+		= MacroHelper.buildMap("steamwrap.api.EInputActionOrigin");
 	
-	public static var toStringMap(default, null):Map<EControllerActionOrigin, String>
-		= MacroHelper.buildMap("steamwrap.api.EControllerActionOrigin", true);
+	public static var toStringMap(default, null):Map<EInputActionOrigin, String>
+		= MacroHelper.buildMap("steamwrap.api.EInputActionOrigin", true);
 		
 	public var NONE = 0;
 	
@@ -852,7 +852,7 @@ class ESteamControllerLEDFlags {
 	
 	public var UNKNOWN = -1;
 	
-	@:from private static function fromString (s:String):EControllerActionOrigin {
+	@:from private static function fromString (s:String):EInputActionOrigin {
 		
 		var i = Std.parseInt(s);
 		
@@ -882,7 +882,7 @@ class ESteamControllerLEDFlags {
 	 * @param	value the integer value of a controller action origin from the steam API
 	 * @return	a unique string identifier for this glyph, OR "unknown" if the glyph is not known (see Controller.getGlyphForActionOrigin())
 	 */
-	public static function getGlyph(value:EControllerActionOrigin):String {
+	public static function getGlyph(value:EInputActionOrigin):String {
 		return switch(value)
 		{
 			case NONE:               "none";
